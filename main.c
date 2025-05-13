@@ -41,7 +41,6 @@ int main(int argc, char *argv[])
 
     SDL_FRect dest = { player_x, player_y, player_width, player_height };
 
-
     while (1) {
         SDL_PollEvent(&event);
         if (event.type == SDL_EVENT_QUIT) {
@@ -64,22 +63,6 @@ int main(int argc, char *argv[])
             else if( event.key.key == SDLK_RIGHT )
             {
                 player_x += player_speed;
-            }
-            else if( event.key.key == SDLK_W )
-            {
-                player_height -= 0.2;
-            }
-            else if( event.key.key == SDLK_S )
-            {
-                player_height += 0.2;
-            }
-            else if( event.key.key == SDLK_A )
-            {
-                player_width -= 0.2;
-            }
-            else if( event.key.key == SDLK_D )
-            {
-                player_width += 0.2;
             }
         }
 
