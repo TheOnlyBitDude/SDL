@@ -8,34 +8,62 @@ void null_seed() {
     srand(time(NULL));
 }
 
-void update_player(float *player_x, float *player_y, float player_speed, float deltaTime, SDL_FRect *player_rect, SDL_FRect *obstacle_rect, int *running) {
+void shoot_bullet(SDL_Texture **bullet_texture, SDL_FRect *bullet_rect, bool *bullet_active, SDL_Renderer *renderer, SDL_FRect *player_rect) {
+    if (!(*bullet_active)) {
+        SDL_Surface *bullet_surface = SDL_LoadBMP("bullet.BMP");
+        if (!bullet_surface) {
+            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't load bullet.BMP: %s", SDL_GetError());
+            return;
+        }
+
+        *bullet_texture = SDL_CreateTextureFromSurface(renderer, bullet_surface);
+        SDL_DestroySurface(bullet_surface);
+
+        if (!(*bullet_texture)) {
+            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't create bullet texture: %s", SDL_GetError());
+            return;
+        }
+
+        bullet_rect->w = 16.0f;
+        bullet_rect->h = 16.0f;
+        bullet_rect->x = player_rect->x + 24.0f + (rand() % 26 - 15);
+        bullet_rect->y = player_rect->y + player_rect->h / 2.0f - bullet_rect->h / 2.0f;
+
+        *bullet_active = true;
+    } else {
+        bullet_rect->y += 3.0f;
+    }
+}
+
+void update_player(float *player_x, float *player_y, float player_speed, float deltaTime, SDL_FRect *player_rect, SDL_FRect *obstacle_rect, int *running, SDL_Renderer *renderer, SDL_Texture **bullet_texture, SDL_FRect *bullet_rect, bool *bullet_active) {
     const bool *keyboard = SDL_GetKeyboardState(NULL);
     if (keyboard[SDL_SCANCODE_UP]) *player_y -= player_speed * deltaTime;
     if (keyboard[SDL_SCANCODE_DOWN]) *player_y += player_speed * deltaTime;
     if (keyboard[SDL_SCANCODE_LEFT]) *player_x -= player_speed * deltaTime;
     if (keyboard[SDL_SCANCODE_RIGHT]) *player_x += player_speed * deltaTime;
+    if (keyboard[SDL_SCANCODE_SPACE]) shoot_bullet(bullet_texture, bullet_rect, bullet_active, renderer, player_rect);
 
-    // Update player Rect
     player_rect->x = *player_x;
     player_rect->y = *player_y;
 
-    // Detect Collision
     if (SDL_HasRectIntersectionFloat(player_rect, obstacle_rect)) {
         SDL_Log("Collision detected, exiting...");
         *running = 0;
     }
 }
 
-
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
     null_seed();
     SDL_Window *window;
     SDL_Renderer *renderer;
     SDL_Surface *surface;
     SDL_Texture *player_texture;
     SDL_Texture *obstacle_texture;
+    SDL_Texture *bullet_texture = NULL;
     SDL_Event event;
+
+    SDL_FRect bullet_rect;
+    bool bullet_active = false;
 
     if (!SDL_Init(SDL_INIT_VIDEO)) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't initialize SDL: %s", SDL_GetError());
@@ -51,12 +79,10 @@ int main(int argc, char *argv[])
     if (icon) {
         SDL_SetWindowIcon(window, icon);
         SDL_DestroySurface(icon);
-    }
-    else {
+    } else {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't load icon.bmp: %s", SDL_GetError());
     }
 
-    // --- Load Player ---
     surface = SDL_LoadBMP("sample.bmp");
     if (!surface) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't load sample.bmp: %s", SDL_GetError());
@@ -69,7 +95,6 @@ int main(int argc, char *argv[])
         return 3;
     }
 
-    // --- Load Obstacle ---
     surface = SDL_LoadBMP("colision.bmp");
     if (!surface) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't load colision.bmp: %s", SDL_GetError());
@@ -82,14 +107,10 @@ int main(int argc, char *argv[])
         return 3;
     }
 
-    // --- Define Player ---
     float player_x = 100.0f, player_y = 100.0f;
-    float player_speed = 360.0f; // Frames Per Second
+    float player_speed = 360.0f;
     float player_width = 64.0f, player_height = 64.0f;
-
     SDL_FRect player_rect = { player_x, player_y, player_width, player_height };
-
-    // --- Define Obstacle ---
     SDL_FRect obstacle_rect = { 500.0f, 300.0f, 64.0f, 64.0f };
 
     int running = 1;
@@ -97,7 +118,6 @@ int main(int argc, char *argv[])
     float deltaTime = 0.0f;
 
     while (running) {
-        // Delta time
         now = SDL_GetTicks();
         deltaTime = (now - last) / 1000.0f;
         last = now;
@@ -108,14 +128,16 @@ int main(int argc, char *argv[])
             }
         }
 
-        update_player(&player_x, &player_y, player_speed, deltaTime, &player_rect, &obstacle_rect, &running);
+        update_player(&player_x, &player_y, player_speed, deltaTime, &player_rect, &obstacle_rect, &running, renderer, &bullet_texture, &bullet_rect, &bullet_active);
 
-        // Render
         SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xFF);
         SDL_RenderClear(renderer);
 
         SDL_RenderTexture(renderer, obstacle_texture, NULL, &obstacle_rect);
         SDL_RenderTexture(renderer, player_texture, NULL, &player_rect);
+        if (bullet_active) {
+            SDL_RenderTexture(renderer, bullet_texture, NULL, &bullet_rect);
+        }
 
         SDL_RenderPresent(renderer);
         SDL_Delay(16);
@@ -123,6 +145,7 @@ int main(int argc, char *argv[])
 
     SDL_DestroyTexture(player_texture);
     SDL_DestroyTexture(obstacle_texture);
+    if (bullet_texture) SDL_DestroyTexture(bullet_texture);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();
