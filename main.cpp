@@ -77,6 +77,8 @@ class Barry {
         }
 };
 
+class Missile {};
+
 int main(int argc, char *argv[])
 {
     null_seed();
