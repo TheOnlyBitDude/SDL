@@ -28,19 +28,48 @@ SDL_Texture* load_texture(SDL_Renderer *renderer, const char *file_path) {
 
 class Barry {
     public:
-        void move(float *player_x, float *player_y, float player_speed, float deltaTime, SDL_FRect *player_rect, SDL_FRect *obstacle_rect, SDL_FRect *roof_rect, SDL_FRect *floor_rect, SDL_FRect *reverse_floor_rect, int *running) {
+        void move(float *fall, float *player_x, float *player_y, float player_speed, float deltaTime, SDL_FRect *player_rect, SDL_FRect *obstacle_rect, SDL_FRect *roof_rect, SDL_FRect *floor_rect, SDL_FRect *reverse_floor_rect, int *running) {
             const bool *keyboard = SDL_GetKeyboardState(NULL);
-            if (keyboard[SDL_SCANCODE_UP] && !SDL_HasRectIntersectionFloat(player_rect, roof_rect)) *player_y -= player_speed * deltaTime;
-            if (keyboard[SDL_SCANCODE_DOWN] && !SDL_HasRectIntersectionFloat(player_rect, floor_rect) && !SDL_HasRectIntersectionFloat(player_rect, reverse_floor_rect)) *player_y += player_speed * deltaTime;
-            if (keyboard[SDL_SCANCODE_LEFT]) *player_x -= player_speed * deltaTime;
-            if (keyboard[SDL_SCANCODE_RIGHT]) *player_x += player_speed * deltaTime;
-            if (keyboard[SDL_SCANCODE_SPACE]) SDL_Log("%ld", rand() % 9223372036854775807);
+            bool on_floor = SDL_HasRectIntersectionFloat(player_rect, floor_rect) || SDL_HasRectIntersectionFloat(player_rect, reverse_floor_rect);
+            bool on_roof = SDL_HasRectIntersectionFloat(player_rect, roof_rect);
 
-            // Update player Rect
+            // Gravity applied when key is held (simulate Mono/Space or Dual/Up)
+            if (keyboard[SDL_SCANCODE_UP]) {
+                *player_y -= *fall;
+                *fall += 0.75f;
+
+                if (on_floor) {
+                    *fall = 4.0f;
+                }
+                if (on_roof) {
+                    *fall = 0.0f;
+                    *player_y = roof_rect->y + roof_rect->h;  // avoid sticking
+                }
+            } else { // Gravity when not holding the key
+                *fall -= 0.75f;
+                *player_y -= *fall;
+
+                if (on_floor) {
+                    *fall = 0.0f;
+                    *player_y = floor_rect->y - player_rect->h;
+                } else {
+                    // Could set `kind = "fall"` here if needed
+                }
+
+                if (on_roof) {
+                    *player_y = roof_rect->y + roof_rect->h + 1;
+                }
+            }
+
+            // Clamp fall speed
+            if (*fall > 10.0f) *fall = 10.0f;
+            if (*fall < -20.0f) *fall = -20.0f;
+
+            // Update rect position
             player_rect->x = *player_x;
             player_rect->y = *player_y;
 
-            // Detect Collision
+            // Collision with obstacle
             if (SDL_HasRectIntersectionFloat(player_rect, obstacle_rect)) {
                 SDL_Log("Collision detected, exiting...");
                 *running = 0;
@@ -114,9 +143,9 @@ int main(int argc, char *argv[])
 
 
     // --- Define Player ---
-    float player_x = 100.0f, player_y = 100.0f;
+    float player_x = 20.0f, player_y = 675.0f;
     float player_speed = 360.0f; // Frames Per Second
-    float player_width = 64.0f, player_height = 64.0f;
+    float player_width = 64.0f, player_height = 74.0f;
 
     SDL_FRect player_rect = { player_x, player_y, player_width, player_height };
 
@@ -127,11 +156,12 @@ int main(int argc, char *argv[])
     Uint64 now = SDL_GetTicks(), last = now;
     float deltaTime = 0.0f;
     int player_frame = 0;
+    float fall = 0;
 
     Barry barry;
 
     while (running) {
-        barry.move(&player_x, &player_y, player_speed, deltaTime, &player_rect, &obstacle_rect, &roof_rect, &floor_rect, &reverse_floor_rect, &running);
+        barry.move(&fall, &player_x, &player_y, player_speed, deltaTime, &player_rect, &obstacle_rect, &roof_rect, &floor_rect, &reverse_floor_rect, &running);
         // Delta time
         now = SDL_GetTicks();
         deltaTime = (now - last) / 1000.0f;
@@ -164,14 +194,12 @@ int main(int argc, char *argv[])
             floor_x = 2740.0f;
         } else {
             floor_x -= 20.0f;
-            SDL_Log("floor_x in bounds: %f", floor_x);
         }
 
         if (reverse_floor_x<= -2740.0f) {
             reverse_floor_x = 2740.0f;
         } else {
             reverse_floor_x -= 20.0f;
-            SDL_Log("reverse_floor_x in bounds: %f", reverse_floor_x);
         }
 
         floor_rect.x = floor_x;

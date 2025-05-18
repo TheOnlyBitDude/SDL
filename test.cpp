@@ -8,25 +8,6 @@ void null_seed() {
     srand(time(NULL));
 }
 
-void update_player(float *player_x, float *player_y, float player_speed, float deltaTime, SDL_FRect *player_rect, SDL_FRect *obstacle_rect, int *running) {
-    const bool *keyboard = SDL_GetKeyboardState(NULL);
-    if (keyboard[SDL_SCANCODE_UP]) *player_y -= player_speed * deltaTime;
-    if (keyboard[SDL_SCANCODE_DOWN]) *player_y += player_speed * deltaTime;
-    if (keyboard[SDL_SCANCODE_LEFT]) *player_x -= player_speed * deltaTime;
-    if (keyboard[SDL_SCANCODE_RIGHT]) *player_x += player_speed * deltaTime;
-    if (keyboard[SDL_SCANCODE_SPACE]) printf("%ld", rand() % 9223372036854775807);
-
-    // Update player Rect
-    player_rect->x = *player_x;
-    player_rect->y = *player_y;
-
-    // Detect Collision
-    if (SDL_HasRectIntersectionFloat(player_rect, obstacle_rect)) {
-        SDL_Log("Collision detected, exiting...");
-        *running = 0;
-    }
-}
-
 SDL_Texture* load_texture(SDL_Renderer *renderer, const char *file_path) {
     SDL_Surface *surface = SDL_LoadBMP(file_path);
     if (!surface) {
@@ -45,16 +26,75 @@ SDL_Texture* load_texture(SDL_Renderer *renderer, const char *file_path) {
     return texture;
 }
 
+class Barry {
+    public:
+        void move(float *fall, float *player_x, float *player_y, float player_speed, float deltaTime,
+          SDL_FRect *player_rect, SDL_FRect *obstacle_rect,
+          SDL_FRect *roof_rect, SDL_FRect *floor_rect, SDL_FRect *reverse_floor_rect, int *running) {
+    
+            const bool *keyboard = SDL_GetKeyboardState(NULL);
+            bool on_floor = SDL_HasRectIntersectionFloat(player_rect, floor_rect) || SDL_HasRectIntersectionFloat(player_rect, reverse_floor_rect);
+            bool on_roof = SDL_HasRectIntersectionFloat(player_rect, roof_rect);
+
+            // Gravity applied when key is held (simulate Mono/Space or Dual/Up)
+            if (keyboard[SDL_SCANCODE_UP]) {
+                *player_y -= *fall;
+                *fall += 0.75f;
+
+                if (on_floor) {
+                    *fall = 4.0f;
+                }
+                if (on_roof) {
+                    *fall = 0.0f;
+                    *player_y = roof_rect->y + roof_rect->h;  // avoid sticking
+                }
+            } else { // Gravity when not holding the key
+                *fall -= 0.75f;
+                *player_y -= *fall;
+
+                if (on_floor) {
+                    *fall = 0.0f;
+                    *player_y = floor_rect->y - player_rect->h;
+                } else {
+                    // Could set `kind = "fall"` here if needed
+                }
+
+                if (on_roof) {
+                    *player_y = roof_rect->y + roof_rect->h + 1;
+                }
+            }
+
+            // Clamp fall speed
+            if (*fall > 10.0f) *fall = 10.0f;
+            if (*fall < -20.0f) *fall = -20.0f;
+
+            // Update rect position
+            player_rect->x = *player_x;
+            player_rect->y = *player_y;
+
+            // Collision with obstacle
+            if (SDL_HasRectIntersectionFloat(player_rect, obstacle_rect)) {
+                SDL_Log("Collision detected, exiting...");
+                *running = 0;
+            }
+        }
+
+};
 
 int main(int argc, char *argv[])
 {
     null_seed();
+    int screen_width = 1366;
+    int screen_height = 768;
     SDL_Window *window;
     SDL_Renderer *renderer;
     SDL_Surface *surface;
     SDL_Texture *player_texture;
     SDL_Texture *obstacle_texture;
     SDL_Texture *background;
+    SDL_Texture *floor;
+    SDL_Texture *reverse_floor;
+    SDL_Texture *roof;
     SDL_Event event;
 
     if (!SDL_Init(SDL_INIT_VIDEO)) {
@@ -62,7 +102,7 @@ int main(int argc, char *argv[])
         return 3;
     }
 
-    if (!SDL_CreateWindowAndRenderer("PyPack Joyride pre-alpha", 1366, 768, SDL_WINDOW_RESIZABLE, &window, &renderer)) {
+    if (!SDL_CreateWindowAndRenderer("PyPack Joyride pre-alpha", screen_width, screen_height, SDL_WINDOW_RESIZABLE, &window, &renderer)) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't create window and renderer: %s", SDL_GetError());
         return 3;
     }
@@ -79,12 +119,31 @@ int main(int argc, char *argv[])
     player_texture = load_texture(renderer, "player.bmp");
     if (!player_texture) return 3;
 
-    // --- Load Obstacle ---
     obstacle_texture = load_texture(renderer, "colision.bmp");
     if (!obstacle_texture) return 3;
 
     background = load_texture(renderer, "background.bmp");
     if (!background) return 3;
+
+    floor = load_texture(renderer, "res/img/floor.bmp");
+    if (!floor) return 3;
+
+    reverse_floor = load_texture(renderer, "res/img/floor_rvrs.bmp");
+    if (!reverse_floor) return 3;
+
+    roof = load_texture(renderer, "res/img/roof.bmp");
+    if (!roof) return 3;
+
+    SDL_FRect roof_rect = { 0, -40, screen_width, 40 };
+
+    float floor_x = 0.0f;
+
+    SDL_FRect floor_rect = { floor_x, screen_height-50, 2760, 50} ;
+
+    float reverse_floor_x = 2740.0f;
+
+    SDL_FRect reverse_floor_rect = { reverse_floor_x, screen_height-50, 2760, 50 };
+
 
 
     // --- Define Player ---
@@ -100,8 +159,13 @@ int main(int argc, char *argv[])
     int running = 1;
     Uint64 now = SDL_GetTicks(), last = now;
     float deltaTime = 0.0f;
+    int player_frame = 0;
+    float fall = 0;
+
+    Barry barry;
 
     while (running) {
+        barry.move(&fall, &player_x, &player_y, player_speed, deltaTime, &player_rect, &obstacle_rect, &roof_rect, &floor_rect, &reverse_floor_rect, &running);
         // Delta time
         now = SDL_GetTicks();
         deltaTime = (now - last) / 1000.0f;
@@ -112,8 +176,41 @@ int main(int argc, char *argv[])
                 running = 0;
             }
         }
+        if (player_frame == 40) {
+            player_frame = 0;
+        } else {
+            player_frame++;
+            if (10>=player_frame && player_frame>=0) {
+                player_texture = load_texture(renderer, "res/img/Walk1.bmp");
+            }
+            else if (20>=player_frame && player_frame>=11) {
+                player_texture = load_texture(renderer, "res/img/Walk2.bmp");
+            }
+            else if (30>=player_frame && player_frame>=21) {
+                player_texture = load_texture(renderer, "res/img/Walk3.bmp");
+            }
+            else if (40>=player_frame && player_frame>=31) {
+                player_texture = load_texture(renderer, "res/img/Walk4.bmp");
+            }
+        }
 
-        update_player(&player_x, &player_y, player_speed, deltaTime, &player_rect, &obstacle_rect, &running);
+        if (floor_x<= -2740.0f) {
+            floor_x = 2740.0f;
+        } else {
+            floor_x -= 20.0f;
+        }
+
+        if (reverse_floor_x<= -2740.0f) {
+            reverse_floor_x = 2740.0f;
+        } else {
+            reverse_floor_x -= 20.0f;
+        }
+
+        floor_rect.x = floor_x;
+        reverse_floor_rect.x = reverse_floor_x;
+
+        const bool *keyboard = SDL_GetKeyboardState(NULL);
+
 
         // Render
         SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xFF);
@@ -122,6 +219,9 @@ int main(int argc, char *argv[])
         SDL_RenderTexture(renderer, background, NULL, NULL);
         SDL_RenderTexture(renderer, obstacle_texture, NULL, &obstacle_rect);
         SDL_RenderTexture(renderer, player_texture, NULL, &player_rect);
+        SDL_RenderTexture(renderer, roof, NULL, &roof_rect);
+        SDL_RenderTexture(renderer, floor, NULL, &floor_rect);
+        SDL_RenderTexture(renderer, reverse_floor, NULL, &reverse_floor_rect);
 
         SDL_RenderPresent(renderer);
         SDL_Delay(16);
