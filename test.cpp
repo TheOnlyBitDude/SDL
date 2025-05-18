@@ -28,10 +28,7 @@ SDL_Texture* load_texture(SDL_Renderer *renderer, const char *file_path) {
 
 class Barry {
     public:
-        void move(float *fall, float *player_x, float *player_y, float player_speed, float deltaTime,
-          SDL_FRect *player_rect, SDL_FRect *obstacle_rect,
-          SDL_FRect *roof_rect, SDL_FRect *floor_rect, SDL_FRect *reverse_floor_rect, int *running) {
-    
+        void move(float *fall, float *player_x, float *player_y, float player_speed, float deltaTime, SDL_FRect *player_rect, SDL_FRect *obstacle_rect, SDL_FRect *roof_rect, SDL_FRect *floor_rect, SDL_FRect *reverse_floor_rect, int *running) {
             const bool *keyboard = SDL_GetKeyboardState(NULL);
             bool on_floor = SDL_HasRectIntersectionFloat(player_rect, floor_rect) || SDL_HasRectIntersectionFloat(player_rect, reverse_floor_rect);
             bool on_roof = SDL_HasRectIntersectionFloat(player_rect, roof_rect);
@@ -78,8 +75,57 @@ class Barry {
                 *running = 0;
             }
         }
+        void animate(SDL_Renderer *renderer, SDL_Texture **player_texture, int player_frame) {
+            if (*player_texture) {
+                SDL_DestroyTexture(*player_texture);
+                *player_texture = NULL;
+            }
 
+            // Cargar la nueva textura según el frame
+            if (player_frame >= 0 && player_frame <= 10) {
+                *player_texture = load_texture(renderer, "res/img/Walk1.bmp");
+            } else if (player_frame >= 11 && player_frame <= 20) {
+                *player_texture = load_texture(renderer, "res/img/Walk2.bmp");
+            } else if (player_frame >= 21 && player_frame <= 30) {
+                *player_texture = load_texture(renderer, "res/img/Walk3.bmp");
+            } else if (player_frame >= 31 && player_frame <= 40) {
+                *player_texture = load_texture(renderer, "res/img/Walk4.bmp");
+            }
+        }
 };
+
+class Missile {
+    public:
+    void move(){
+
+    }
+};
+
+void update_background_scroll(SDL_FRect *floor_rect, SDL_FRect *reverse_floor_rect, SDL_FRect *bg_rect, SDL_FRect *reverse_bg_rect) {
+    // Movimiento
+    floor_rect->x -= 20.0f;
+    reverse_floor_rect->x -= 20.0f;
+    bg_rect->x -= 20.0f;
+    reverse_bg_rect->x -= 20.0f;
+
+    // Reset cuando salen de la pantalla
+    if (floor_rect->x <= -2740.0f) {
+        floor_rect->x = 2740.0f;
+    }
+
+    if (reverse_floor_rect->x <= -2740.0f) {
+        reverse_floor_rect->x = 2740.0f;
+    }
+
+    if (bg_rect->x <= -2740.0f) {
+        bg_rect->x = reverse_bg_rect->x + 2740.0f;
+    }
+
+    if (reverse_bg_rect->x <= -2740.0f) {
+        reverse_bg_rect->x = bg_rect->x + 2740.0f;
+    }
+}
+
 
 int main(int argc, char *argv[])
 {
@@ -92,6 +138,7 @@ int main(int argc, char *argv[])
     SDL_Texture *player_texture;
     SDL_Texture *obstacle_texture;
     SDL_Texture *background;
+    SDL_Texture *reverse_background;
     SDL_Texture *floor;
     SDL_Texture *reverse_floor;
     SDL_Texture *roof;
@@ -122,8 +169,15 @@ int main(int argc, char *argv[])
     obstacle_texture = load_texture(renderer, "colision.bmp");
     if (!obstacle_texture) return 3;
 
-    background = load_texture(renderer, "background.bmp");
+    background = load_texture(renderer, "res/img/bg.bmp");
     if (!background) return 3;
+
+    reverse_background = load_texture(renderer, "res/img/bg_rvrs.bmp");
+    if (!reverse_background) return 3;
+
+    SDL_FRect bg_rect = { 0, 0, 2740, 1000};
+
+    SDL_FRect reverse_background_rect = { 2740, 0, 2740, 1000};
 
     floor = load_texture(renderer, "res/img/floor.bmp");
     if (!floor) return 3;
@@ -136,20 +190,16 @@ int main(int argc, char *argv[])
 
     SDL_FRect roof_rect = { 0, -40, screen_width, 40 };
 
-    float floor_x = 0.0f;
+    SDL_FRect floor_rect = { 0.0f, screen_height-50, 2740, 50} ;
 
-    SDL_FRect floor_rect = { floor_x, screen_height-50, 2760, 50} ;
-
-    float reverse_floor_x = 2740.0f;
-
-    SDL_FRect reverse_floor_rect = { reverse_floor_x, screen_height-50, 2760, 50 };
+    SDL_FRect reverse_floor_rect = { 2740.0f, screen_height-50, 2740, 50 };
 
 
 
     // --- Define Player ---
-    float player_x = 100.0f, player_y = 100.0f;
+    float player_x = 20.0f, player_y = 675.0f;
     float player_speed = 360.0f; // Frames Per Second
-    float player_width = 64.0f, player_height = 64.0f;
+    float player_width = 64.0f, player_height = 74.0f;
 
     SDL_FRect player_rect = { player_x, player_y, player_width, player_height };
 
@@ -180,43 +230,19 @@ int main(int argc, char *argv[])
             player_frame = 0;
         } else {
             player_frame++;
-            if (10>=player_frame && player_frame>=0) {
-                player_texture = load_texture(renderer, "res/img/Walk1.bmp");
-            }
-            else if (20>=player_frame && player_frame>=11) {
-                player_texture = load_texture(renderer, "res/img/Walk2.bmp");
-            }
-            else if (30>=player_frame && player_frame>=21) {
-                player_texture = load_texture(renderer, "res/img/Walk3.bmp");
-            }
-            else if (40>=player_frame && player_frame>=31) {
-                player_texture = load_texture(renderer, "res/img/Walk4.bmp");
-            }
         }
 
-        if (floor_x<= -2740.0f) {
-            floor_x = 2740.0f;
-        } else {
-            floor_x -= 20.0f;
-        }
+        barry.animate(renderer, &player_texture, player_frame);
 
-        if (reverse_floor_x<= -2740.0f) {
-            reverse_floor_x = 2740.0f;
-        } else {
-            reverse_floor_x -= 20.0f;
-        }
 
-        floor_rect.x = floor_x;
-        reverse_floor_rect.x = reverse_floor_x;
-
-        const bool *keyboard = SDL_GetKeyboardState(NULL);
-
+        update_background_scroll(&floor_rect, &reverse_floor_rect, &bg_rect, &reverse_background_rect);
 
         // Render
         SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xFF);
         SDL_RenderClear(renderer);
 
-        SDL_RenderTexture(renderer, background, NULL, NULL);
+        SDL_RenderTexture(renderer, background, NULL, &bg_rect);
+        SDL_RenderTexture(renderer, reverse_background, NULL, &reverse_background_rect);
         SDL_RenderTexture(renderer, obstacle_texture, NULL, &obstacle_rect);
         SDL_RenderTexture(renderer, player_texture, NULL, &player_rect);
         SDL_RenderTexture(renderer, roof, NULL, &roof_rect);

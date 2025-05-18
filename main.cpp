@@ -75,9 +75,57 @@ class Barry {
                 *running = 0;
             }
         }
+        void animate(SDL_Renderer *renderer, SDL_Texture **player_texture, int player_frame) {
+            if (*player_texture) {
+                SDL_DestroyTexture(*player_texture);
+                *player_texture = NULL;
+            }
+
+            // Cargar la nueva textura según el frame
+            if (player_frame >= 0 && player_frame <= 10) {
+                *player_texture = load_texture(renderer, "res/img/Walk1.bmp");
+            } else if (player_frame >= 11 && player_frame <= 20) {
+                *player_texture = load_texture(renderer, "res/img/Walk2.bmp");
+            } else if (player_frame >= 21 && player_frame <= 30) {
+                *player_texture = load_texture(renderer, "res/img/Walk3.bmp");
+            } else if (player_frame >= 31 && player_frame <= 40) {
+                *player_texture = load_texture(renderer, "res/img/Walk4.bmp");
+            }
+        }
 };
 
-class Missile {};
+class Missile {
+    public:
+    void move(){
+
+    }
+};
+
+void update_background_scroll(SDL_FRect *floor_rect, SDL_FRect *reverse_floor_rect, SDL_FRect *bg_rect, SDL_FRect *reverse_bg_rect) {
+    // Movimiento
+    floor_rect->x -= 20.0f;
+    reverse_floor_rect->x -= 20.0f;
+    bg_rect->x -= 20.0f;
+    reverse_bg_rect->x -= 20.0f;
+
+    // Reset cuando salen de la pantalla
+    if (floor_rect->x <= -2740.0f) {
+        floor_rect->x = 2740.0f;
+    }
+
+    if (reverse_floor_rect->x <= -2740.0f) {
+        reverse_floor_rect->x = 2740.0f;
+    }
+
+    if (bg_rect->x <= -2740.0f) {
+        bg_rect->x = reverse_bg_rect->x + 2740.0f;
+    }
+
+    if (reverse_bg_rect->x <= -2740.0f) {
+        reverse_bg_rect->x = bg_rect->x + 2740.0f;
+    }
+}
+
 
 int main(int argc, char *argv[])
 {
@@ -182,46 +230,12 @@ int main(int argc, char *argv[])
             player_frame = 0;
         } else {
             player_frame++;
-            if (10>=player_frame && player_frame>=0) {
-                player_texture = load_texture(renderer, "res/img/Walk1.bmp");
-            }
-            else if (20>=player_frame && player_frame>=11) {
-                player_texture = load_texture(renderer, "res/img/Walk2.bmp");
-            }
-            else if (30>=player_frame && player_frame>=21) {
-                player_texture = load_texture(renderer, "res/img/Walk3.bmp");
-            }
-            else if (40>=player_frame && player_frame>=31) {
-                player_texture = load_texture(renderer, "res/img/Walk4.bmp");
-            }
         }
 
-        floor_rect.x -= 20.0f;
-        reverse_floor_rect.x -= 20.0f;
-        bg_rect.x -= 20;
-        reverse_background_rect.x -= 20;
+        barry.animate(renderer, &player_texture, player_frame);
 
-        if (floor_rect.x<= -2740.0f) {
-            floor_rect.x = 2740.0f;
-        }
 
-        if (reverse_floor_rect.x<= -2740.0f) {
-            reverse_floor_rect.x = 2740.0f;
-        }
-
-        if (bg_rect.x <= -2740) {
-            bg_rect.x = reverse_background_rect.x + 2740;
-        }
-
-        if (reverse_background_rect.x <= -2740) {
-            reverse_background_rect.x = bg_rect.x + 2740;
-        }
-
-        floor_rect.x = floor_rect.x;
-        reverse_floor_rect.x = reverse_floor_rect.x;
-
-        const bool *keyboard = SDL_GetKeyboardState(NULL);
-
+        update_background_scroll(&floor_rect, &reverse_floor_rect, &bg_rect, &reverse_background_rect);
 
         // Render
         SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xFF);
