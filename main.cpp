@@ -8,25 +8,6 @@ void null_seed() {
     srand(time(NULL));
 }
 
-void update_player(float *player_x, float *player_y, float player_speed, float deltaTime, SDL_FRect *player_rect, SDL_FRect *obstacle_rect, int *running) {
-    const bool *keyboard = SDL_GetKeyboardState(NULL);
-    if (keyboard[SDL_SCANCODE_UP]) *player_y -= player_speed * deltaTime;
-    if (keyboard[SDL_SCANCODE_DOWN]) *player_y += player_speed * deltaTime;
-    if (keyboard[SDL_SCANCODE_LEFT]) *player_x -= player_speed * deltaTime;
-    if (keyboard[SDL_SCANCODE_RIGHT]) *player_x += player_speed * deltaTime;
-    if (keyboard[SDL_SCANCODE_SPACE]) SDL_Log("%ld", rand() % 9223372036854775807);
-
-    // Update player Rect
-    player_rect->x = *player_x;
-    player_rect->y = *player_y;
-
-    // Detect Collision
-    if (SDL_HasRectIntersectionFloat(player_rect, obstacle_rect)) {
-        SDL_Log("Collision detected, exiting...");
-        *running = 0;
-    }
-}
-
 SDL_Texture* load_texture(SDL_Renderer *renderer, const char *file_path) {
     SDL_Surface *surface = SDL_LoadBMP(file_path);
     if (!surface) {
