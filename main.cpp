@@ -28,10 +28,10 @@ SDL_Texture* load_texture(SDL_Renderer *renderer, const char *file_path) {
 
 class Barry {
     public:
-        void move(float *player_x, float *player_y, float player_speed, float deltaTime, SDL_FRect *player_rect, SDL_FRect *obstacle_rect, int *running) {
+        void move(float *player_x, float *player_y, float player_speed, float deltaTime, SDL_FRect *player_rect, SDL_FRect *obstacle_rect, SDL_FRect *roof_rect, SDL_FRect *floor_rect, SDL_FRect *reverse_floor_rect, int *running) {
             const bool *keyboard = SDL_GetKeyboardState(NULL);
-            if (keyboard[SDL_SCANCODE_UP]) *player_y -= player_speed * deltaTime;
-            if (keyboard[SDL_SCANCODE_DOWN]) *player_y += player_speed * deltaTime;
+            if (keyboard[SDL_SCANCODE_UP] && !SDL_HasRectIntersectionFloat(player_rect, roof_rect)) *player_y -= player_speed * deltaTime;
+            if (keyboard[SDL_SCANCODE_DOWN] && !SDL_HasRectIntersectionFloat(player_rect, floor_rect) && !SDL_HasRectIntersectionFloat(player_rect, reverse_floor_rect)) *player_y += player_speed * deltaTime;
             if (keyboard[SDL_SCANCODE_LEFT]) *player_x -= player_speed * deltaTime;
             if (keyboard[SDL_SCANCODE_RIGHT]) *player_x += player_speed * deltaTime;
             if (keyboard[SDL_SCANCODE_SPACE]) SDL_Log("%ld", rand() % 9223372036854775807);
@@ -103,9 +103,13 @@ int main(int argc, char *argv[])
 
     SDL_FRect roof_rect = { 0, -40, screen_width, 40 };
 
-    SDL_FRect floor_rect = { 0, screen_height-50, 2740, 50} ;
+    float floor_x = 0.0f;
 
-    SDL_FRect reverse_floor_rect = { 2740, screen_height-50, 2740, 50 };
+    SDL_FRect floor_rect = { floor_x, screen_height-50, 2760, 50} ;
+
+    float reverse_floor_x = 2740.0f;
+
+    SDL_FRect reverse_floor_rect = { reverse_floor_x, screen_height-50, 2760, 50 };
 
 
 
@@ -127,7 +131,7 @@ int main(int argc, char *argv[])
     Barry barry;
 
     while (running) {
-        barry.move(&player_x, &player_y, player_speed, deltaTime, &player_rect, &obstacle_rect, &running);
+        barry.move(&player_x, &player_y, player_speed, deltaTime, &player_rect, &obstacle_rect, &roof_rect, &floor_rect, &reverse_floor_rect, &running);
         // Delta time
         now = SDL_GetTicks();
         deltaTime = (now - last) / 1000.0f;
@@ -138,7 +142,6 @@ int main(int argc, char *argv[])
                 running = 0;
             }
         }
-        SDL_Log("%d", player_frame);
         if (player_frame == 40) {
             player_frame = 0;
         } else {
@@ -157,8 +160,24 @@ int main(int argc, char *argv[])
             }
         }
 
+        if (floor_x<= -2740.0f) {
+            floor_x = 2740.0f;
+        } else {
+            floor_x -= 20.0f;
+            SDL_Log("floor_x in bounds: %f", floor_x);
+        }
+
+        if (reverse_floor_x<= -2740.0f) {
+            reverse_floor_x = 2740.0f;
+        } else {
+            reverse_floor_x -= 20.0f;
+            SDL_Log("reverse_floor_x in bounds: %f", reverse_floor_x);
+        }
+
+        floor_rect.x = floor_x;
+        reverse_floor_rect.x = reverse_floor_x;
+
         const bool *keyboard = SDL_GetKeyboardState(NULL);
-        if (keyboard[SDL_SCANCODE_P]) player_texture = load_texture(renderer, "res/img/Walk1.bmp");
 
 
         // Render
