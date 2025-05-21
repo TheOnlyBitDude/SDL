@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include <ctime>
 #include <algorithm>
+#include <limits>
 
 void null_seed() {
     srand(time(NULL));
@@ -161,6 +162,104 @@ void update_background_scroll(SDL_FRect *floor_rect, SDL_FRect *reverse_floor_re
     if (reverse_bg_rect->x <= -2740.0f) reverse_bg_rect->x = bg_rect->x + 2740.0f;
 }
 
+class Missile {
+public:
+    SDL_FRect rect;
+    SDL_Texture* texture;
+    SDL_Renderer* renderer;
+
+    int duration;
+    int speed;
+    int counter;
+    int i;
+    int wait;
+    bool pre_launch;
+    bool launched;
+    bool f;
+    float pos;
+    float w, h;
+
+    Missile(SDL_Renderer* rend, float x, float y, float width, float height, int spd, int dur)
+        : renderer(rend), w(width), h(height), speed(spd), duration(dur),
+          counter(0), i(0), wait(0), pre_launch(false), launched(false), f(false)
+    {
+        rect = { x, y, width, height };
+        texture = load_texture(renderer, "res/img/Rocket1.bmp");
+    }
+
+    void animate() {
+        if (counter >= 0 && counter < 2)
+            texture = load_texture(renderer, "res/img/Rocket1.bmp");
+        else if (counter >= 2 && counter < 4)
+            texture = load_texture(renderer, "res/img/Rocket2.bmp");
+        else if (counter >= 4 && counter < 6)
+            texture = load_texture(renderer, "res/img/Rocket3.bmp");
+        else if (counter >= 6 && counter < 8)
+            texture = load_texture(renderer, "res/img/Rocket4.bmp");
+
+        counter++;
+        if (counter >= 8)
+            counter = 0;
+    }
+
+
+    void warning() {
+        if (!pre_launch) {
+            pos = static_cast<float>(20 + rand() % (668 - 20));
+            rect.y = pos;
+            launched = false;
+        }
+        launch();
+    }
+
+    void launch() {
+        if (!pre_launch) {
+            i = 0;
+            rect.x = 1324.0f;
+            pre_launch = true;
+            wait = 0;
+            f = false;
+        }
+
+        if (wait == 34) {
+            // SFX
+        }
+
+        if (wait == 35) {
+            if (i != duration) {
+                rect.x -= static_cast<float>(speed);
+                i++;
+            } else {
+                i = 0;
+                wait = 0;
+                pre_launch = false;
+                launched = false;
+            }
+
+            if (!f)
+                f = true;
+
+            rect.y = pos;
+            animate();
+        } else {
+            wait++;
+        }
+    }
+
+    void update() {
+        warning();
+    }
+
+    void render() {
+        if (texture)
+            SDL_RenderTexture(renderer, texture, NULL, &rect);
+    }
+
+    bool collides_with(const SDL_FRect& player_rect) {
+        return SDL_HasRectIntersectionFloat(&rect, &player_rect);
+    }
+};
+
 int main(int argc, char *argv[]) {
     null_seed();
     int screen_width = 1366, screen_height = 768;
@@ -169,7 +268,7 @@ int main(int argc, char *argv[]) {
     SDL_Event event;
 
     if (!SDL_Init(SDL_INIT_VIDEO)) return 3;
-    if (!SDL_CreateWindowAndRenderer("PyPack Joyride pre-alpha", screen_width, screen_height, SDL_WINDOW_RESIZABLE, &window, &renderer)) return 3;
+    if (!SDL_CreateWindowAndRenderer("PyPack Joyride eta", screen_width, screen_height, SDL_WINDOW_RESIZABLE, &window, &renderer)) return 3;
 
     SDL_Texture *player_texture = load_texture(renderer, "player.bmp");
     SDL_Texture *obstacle_texture = load_texture(renderer, "colision.bmp");
@@ -195,8 +294,61 @@ int main(int argc, char *argv[]) {
     Barry barry;
     std::vector<Bullet> bullets;
 
+    std::vector<Missile> missiles;
+    for (int i = 0; i < 7; ++i) {
+        missiles.emplace_back(renderer, 0, 2147483647, 93.0f, 34.0f, 50, 52);
+    }
+
+
     while (running) {
+
+        int lnch = rand() % 225 + 1;  // Random entre 1 y 225
+
+        if ((lnch == 126 || lnch == 173 || lnch == 111)) {
+            missiles[0].update();
+            missiles[0].launched = true;
+        }
+        else if ((lnch == 222 || lnch == 109 || lnch == 63)) {
+            missiles[1].update();
+            missiles[1].launched = true;
+        }
+        else if ((lnch == 35 || lnch == 17 || lnch == 39)) {
+            missiles[2].update();
+            missiles[2].launched = true;
+        }
+        else if ((lnch == 2 || lnch == 44 || lnch == 22)) {
+            missiles[3].update();
+            missiles[3].launched = true;
+        }
+        else if ((lnch == 134 || lnch == 127 || lnch == 159)) {
+            missiles[4].update();
+            missiles[4].launched = true;
+        }
+        else if ((lnch == 241 || lnch == 149 || lnch == 197)) {
+            missiles[5].update();
+            missiles[5].launched = true;
+        }
+        else if ((lnch == 250 || lnch == 110 || lnch == 180)) {
+            missiles[6].update();
+            missiles[6].launched = true;
+        }
+        else if ((lnch == 250 || lnch == 110 || lnch == 180)) {
+            missiles[7].update();
+            missiles[7].launched = true;
+        }
+
+
         barry.move(&fall, &player_x, &player_y, player_speed, deltaTime, &player_rect, &obstacle_rect, &roof_rect, &floor_rect, &reverse_floor_rect, &running);
+
+        for (auto& missile : missiles) {
+            if (missile.launched == true) {
+                missile.update();
+            }
+            if (missile.collides_with(player_rect)) {
+                SDL_Log("Jugador alcanzado por misil. Fin del juego.");
+                running = 0;
+            }
+        }
 
         now = SDL_GetTicks();
         deltaTime = (now - last) / 1000.0f;
@@ -235,6 +387,10 @@ int main(int argc, char *argv[]) {
 
         for (auto& bullet : bullets) {
             bullet.render(renderer);
+        }
+
+        for (auto& missile : missiles) {
+            missile.render();
         }
 
         SDL_RenderPresent(renderer);

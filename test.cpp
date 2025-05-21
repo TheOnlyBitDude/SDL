@@ -1,5 +1,6 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
+#include <string>
 #include <vector>
 #include <cstdlib>
 #include <ctime>
@@ -36,7 +37,7 @@ public:
     Bullet(SDL_Texture* tex, float start_x, float start_y)
         : texture(tex), init_x(true)
     {
-        rect = { start_x, start_y, 10.0f, 10.0f };
+        rect = { start_x, start_y, 10.0f, 45.0f };
     }
 
     void shoot(float barry_x) {
@@ -45,6 +46,7 @@ public:
             init_x = false;
         } else {
             rect.x -= 3.0f;
+            rect.y += 35.0f;
         }
     }
 
@@ -55,12 +57,14 @@ public:
 
 class Barry {
 public:
+    std::string animation = "Run";
     void move(float *fall, float *player_x, float *player_y, float player_speed, float deltaTime, SDL_FRect *player_rect, SDL_FRect *obstacle_rect, SDL_FRect *roof_rect, SDL_FRect *floor_rect, SDL_FRect *reverse_floor_rect, int *running) {
         const bool *keyboard = SDL_GetKeyboardState(NULL);
         bool on_floor = SDL_HasRectIntersectionFloat(player_rect, floor_rect) || SDL_HasRectIntersectionFloat(player_rect, reverse_floor_rect);
         bool on_roof = SDL_HasRectIntersectionFloat(player_rect, roof_rect);
 
         if (keyboard[SDL_SCANCODE_SPACE]) {
+            animation = "Fly";
             *player_y -= *fall;
             *fall += 0.75f;
 
@@ -74,8 +78,11 @@ public:
             *player_y -= *fall;
 
             if (on_floor) {
+                animation = "Run";
                 *fall = 0.0f;
                 *player_y = floor_rect->y - player_rect->h;
+            } else {
+                animation = "Fall";
             }
             if (on_roof) {
                 *player_y = roof_rect->y + roof_rect->h + 1;
@@ -99,23 +106,45 @@ public:
             SDL_DestroyTexture(*player_texture);
             *player_texture = NULL;
         }
-
-        if (player_frame <= 10) {
-            *player_texture = load_texture(renderer, "res/img/Walk1.bmp");
-        } else if (player_frame <= 20) {
-            *player_texture = load_texture(renderer, "res/img/Walk2.bmp");
-        } else if (player_frame <= 30) {
-            *player_texture = load_texture(renderer, "res/img/Walk3.bmp");
-        } else if (player_frame <= 40) {
-            *player_texture = load_texture(renderer, "res/img/Walk4.bmp");
+        
+        if (animation == "Run") {
+            if (player_frame <= 10) {
+                *player_texture = load_texture(renderer, "res/img/Walk1.bmp");
+            } else if (player_frame <= 20) {
+                *player_texture = load_texture(renderer, "res/img/Walk2.bmp");
+            } else if (player_frame <= 30) {
+                *player_texture = load_texture(renderer, "res/img/Walk3.bmp");
+            } else if (player_frame <= 40) {
+                *player_texture = load_texture(renderer, "res/img/Walk4.bmp");
+            }
+        } else if (animation == "Fly") {
+            if (player_frame <= 5) {
+                *player_texture = load_texture(renderer, "res/img/Fly1.bmp");
+            } else if (player_frame <= 10) {
+                *player_texture = load_texture(renderer, "res/img/Fly2.bmp");
+            } else if (player_frame <= 15) {
+                *player_texture = load_texture(renderer, "res/img/Fly3.bmp");
+            } else if (player_frame <= 20) {
+                *player_texture = load_texture(renderer, "res/img/FlyFall.bmp");
+            } else if (player_frame <= 25) {
+                *player_texture = load_texture(renderer, "res/img/Fly1.bmp");
+            } else if (player_frame <= 30) {
+                *player_texture = load_texture(renderer, "res/img/Fly2.bmp");
+            } else if (player_frame <= 35) {
+                *player_texture = load_texture(renderer, "res/img/Fly3.bmp");
+            } else if (player_frame <= 40) {
+                *player_texture = load_texture(renderer, "res/img/FlyFall.bmp");
+            }
+        } else {
+            *player_texture = load_texture(renderer, "res/img/FlyFall.bmp");
         }
     }
 
     void handle_input(std::vector<Bullet>& bullets, SDL_Texture* bullet_texture, const SDL_FRect& player_rect) {
         const bool *keyboard = SDL_GetKeyboardState(NULL);
         if (keyboard[SDL_SCANCODE_SPACE]) {
-            bullets.emplace_back(bullet_texture, player_rect.x, player_rect.y);
-            bullets.emplace_back(bullet_texture, player_rect.x, player_rect.y);
+            bullets.emplace_back(bullet_texture, player_rect.x, player_rect.y+player_rect.h);
+            bullets.emplace_back(bullet_texture, player_rect.x, player_rect.y+player_rect.h);
         }
     }
 };
@@ -132,6 +161,104 @@ void update_background_scroll(SDL_FRect *floor_rect, SDL_FRect *reverse_floor_re
     if (reverse_bg_rect->x <= -2740.0f) reverse_bg_rect->x = bg_rect->x + 2740.0f;
 }
 
+class Missile {
+public:
+    SDL_FRect rect;
+    SDL_Texture* texture;
+    SDL_Renderer* renderer;
+
+    int duration;
+    int speed;
+    int counter;
+    int i;
+    int wait;
+    bool pre_launch;
+    bool launched;
+    bool f;
+    float pos;
+    float w, h;
+
+    Missile(SDL_Renderer* rend, float x, float y, float width, float height, int spd, int dur)
+        : renderer(rend), w(width), h(height), speed(spd), duration(dur),
+          counter(0), i(0), wait(0), pre_launch(false), launched(false), f(false)
+    {
+        rect = { x, y, width, height };
+        texture = load_texture(renderer, "res/img/Rocket1.bmp");
+    }
+
+    void animate() {
+        if (counter >= 0 && counter < 2)
+            texture = load_texture(renderer, "res/img/Rocket1.bmp");
+        else if (counter >= 2 && counter < 4)
+            texture = load_texture(renderer, "res/img/Rocket2.bmp");
+        else if (counter >= 4 && counter < 6)
+            texture = load_texture(renderer, "res/img/Rocket3.bmp");
+        else if (counter >= 6 && counter < 8)
+            texture = load_texture(renderer, "res/img/Rocket4.bmp");
+
+        counter++;
+        if (counter >= 8)
+            counter = 0;
+    }
+
+
+    void warning() {
+        if (!pre_launch) {
+            pos = static_cast<float>(20 + rand() % (668 - 20));
+            rect.y = pos;
+            launched = false;
+        }
+        launch();
+    }
+
+    void launch() {
+        if (!pre_launch) {
+            i = 0;
+            rect.x = 1324.0f;
+            pre_launch = true;
+            wait = 0;
+            f = false;
+        }
+
+        if (wait == 34) {
+            // SFX
+        }
+
+        if (wait == 35) {
+            if (i != duration) {
+                rect.x -= static_cast<float>(speed);
+                i++;
+            } else {
+                i = 0;
+                wait = 0;
+                pre_launch = false;
+                launched = false;
+            }
+
+            if (!f)
+                f = true;
+
+            rect.y = pos;
+            animate();
+        } else {
+            wait++;
+        }
+    }
+
+    void update() {
+        warning();
+    }
+
+    void render() {
+        if (texture)
+            SDL_RenderTexture(renderer, texture, NULL, &rect);
+    }
+
+    bool collides_with(const SDL_FRect& player_rect) {
+        return SDL_HasRectIntersectionFloat(&rect, &player_rect);
+    }
+};
+
 int main(int argc, char *argv[]) {
     null_seed();
     int screen_width = 1366, screen_height = 768;
@@ -140,7 +267,7 @@ int main(int argc, char *argv[]) {
     SDL_Event event;
 
     if (!SDL_Init(SDL_INIT_VIDEO)) return 3;
-    if (!SDL_CreateWindowAndRenderer("PyPack Joyride pre-alpha", screen_width, screen_height, SDL_WINDOW_RESIZABLE, &window, &renderer)) return 3;
+    if (!SDL_CreateWindowAndRenderer("PyPack Joyride eta", screen_width, screen_height, SDL_WINDOW_RESIZABLE, &window, &renderer)) return 3;
 
     SDL_Texture *player_texture = load_texture(renderer, "player.bmp");
     SDL_Texture *obstacle_texture = load_texture(renderer, "colision.bmp");
@@ -149,7 +276,7 @@ int main(int argc, char *argv[]) {
     SDL_Texture *floor = load_texture(renderer, "res/img/floor.bmp");
     SDL_Texture *reverse_floor = load_texture(renderer, "res/img/floor_rvrs.bmp");
     SDL_Texture *roof = load_texture(renderer, "res/img/roof.bmp");
-    SDL_Texture *bullet_texture = load_texture(renderer, "bullet.bmp");
+    SDL_Texture *bullet_texture = load_texture(renderer, "res/img/bullet.bmp");
 
     SDL_FRect bg_rect = { 0, 0, 2740, 1000 }, reverse_bg_rect = { 2740, 0, 2740, 1000 };
     SDL_FRect roof_rect = { 0.0f, -40.0f, static_cast<float>(screen_width), 40.0f };
@@ -166,8 +293,57 @@ int main(int argc, char *argv[]) {
     Barry barry;
     std::vector<Bullet> bullets;
 
+    std::vector<Missile> missiles;
+    for (int i = 0; i < 7; ++i) {
+        missiles.emplace_back(renderer, 0, 0, 93.0f, 34.0f, 50, 52);
+    }
+
+
     while (running) {
+
+        int lnch = rand() % 225 + 1;  // Random entre 1 y 225
+
+        if ((lnch == 126 || lnch == 173 || lnch == 111)) {
+            missiles[0].update();
+            missiles[0].launched = true;
+        }
+        else if ((lnch == 222 || lnch == 109 || lnch == 63)) {
+            missiles[1].update();
+            missiles[1].launched = true;
+        }
+        else if ((lnch == 35 || lnch == 17 || lnch == 39)) {
+            missiles[2].update();
+            missiles[2].launched = true;
+        }
+        else if ((lnch == 2 || lnch == 44 || lnch == 22)) {
+            missiles[3].update();
+            missiles[3].launched = true;
+        }
+        else if ((lnch == 134 || lnch == 127 || lnch == 159)) {
+            missiles[4].update();
+            missiles[4].launched = true;
+        }
+        else if ((lnch == 241 || lnch == 149 || lnch == 197)) {
+            missiles[5].update();
+            missiles[5].launched = true;
+        }
+        else if ((lnch == 250 || lnch == 110 || lnch == 180)) {
+            missiles[6].update();
+            missiles[6].launched = true;
+        }
+
+
         barry.move(&fall, &player_x, &player_y, player_speed, deltaTime, &player_rect, &obstacle_rect, &roof_rect, &floor_rect, &reverse_floor_rect, &running);
+
+        for (auto& missile : missiles) {
+            if (missile.launched == true) {
+                missile.update();
+            }
+            if (missile.collides_with(player_rect)) {
+                SDL_Log("Jugador alcanzado por misil. Fin del juego.");
+                running = 0;
+            }
+        }
 
         now = SDL_GetTicks();
         deltaTime = (now - last) / 1000.0f;
@@ -183,8 +359,11 @@ int main(int argc, char *argv[]) {
             bullet.shoot(player_rect.x);
         }
 
-        bullets.erase(std::remove_if(bullets.begin(), bullets.end(), [](const Bullet& b) {
-            return b.rect.x < -20.0f;
+        bullets.erase(std::remove_if(bullets.begin(), bullets.end(),
+        [&](const Bullet& b) {
+            bool out_of_bounds = b.rect.x < -b.rect.w || b.rect.y > screen_height + b.rect.h;
+            bool hit_floor = SDL_HasRectIntersectionFloat(&b.rect, &floor_rect) || SDL_HasRectIntersectionFloat(&b.rect, &reverse_floor_rect);
+            return out_of_bounds || hit_floor;
         }), bullets.end());
 
         if (++player_frame > 40) player_frame = 0;
@@ -203,6 +382,10 @@ int main(int argc, char *argv[]) {
 
         for (auto& bullet : bullets) {
             bullet.render(renderer);
+        }
+
+        for (auto& missile : missiles) {
+            missile.render();
         }
 
         SDL_RenderPresent(renderer);
