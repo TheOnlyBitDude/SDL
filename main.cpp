@@ -1,5 +1,6 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
+#include <string>
 #include <vector>
 #include <cstdlib>
 #include <ctime>
@@ -56,12 +57,14 @@ public:
 
 class Barry {
 public:
+    std::string animation = "Run";
     void move(float *fall, float *player_x, float *player_y, float player_speed, float deltaTime, SDL_FRect *player_rect, SDL_FRect *obstacle_rect, SDL_FRect *roof_rect, SDL_FRect *floor_rect, SDL_FRect *reverse_floor_rect, int *running) {
         const bool *keyboard = SDL_GetKeyboardState(NULL);
         bool on_floor = SDL_HasRectIntersectionFloat(player_rect, floor_rect) || SDL_HasRectIntersectionFloat(player_rect, reverse_floor_rect);
         bool on_roof = SDL_HasRectIntersectionFloat(player_rect, roof_rect);
 
         if (keyboard[SDL_SCANCODE_SPACE]) {
+            animation = "Fly";
             *player_y -= *fall;
             *fall += 0.75f;
 
@@ -75,8 +78,11 @@ public:
             *player_y -= *fall;
 
             if (on_floor) {
+                animation = "Run";
                 *fall = 0.0f;
                 *player_y = floor_rect->y - player_rect->h;
+            } else {
+                animation = "Fall";
             }
             if (on_roof) {
                 *player_y = roof_rect->y + roof_rect->h + 1;
@@ -100,15 +106,37 @@ public:
             SDL_DestroyTexture(*player_texture);
             *player_texture = NULL;
         }
-
-        if (player_frame <= 10) {
-            *player_texture = load_texture(renderer, "res/img/Walk1.bmp");
-        } else if (player_frame <= 20) {
-            *player_texture = load_texture(renderer, "res/img/Walk2.bmp");
-        } else if (player_frame <= 30) {
-            *player_texture = load_texture(renderer, "res/img/Walk3.bmp");
-        } else if (player_frame <= 40) {
-            *player_texture = load_texture(renderer, "res/img/Walk4.bmp");
+        
+        if (animation == "Run") {
+            if (player_frame <= 10) {
+                *player_texture = load_texture(renderer, "res/img/Walk1.bmp");
+            } else if (player_frame <= 20) {
+                *player_texture = load_texture(renderer, "res/img/Walk2.bmp");
+            } else if (player_frame <= 30) {
+                *player_texture = load_texture(renderer, "res/img/Walk3.bmp");
+            } else if (player_frame <= 40) {
+                *player_texture = load_texture(renderer, "res/img/Walk4.bmp");
+            }
+        } else if (animation == "Fly") {
+            if (player_frame <= 5) {
+                *player_texture = load_texture(renderer, "res/img/Fly1.bmp");
+            } else if (player_frame <= 10) {
+                *player_texture = load_texture(renderer, "res/img/Fly2.bmp");
+            } else if (player_frame <= 15) {
+                *player_texture = load_texture(renderer, "res/img/Fly3.bmp");
+            } else if (player_frame <= 20) {
+                *player_texture = load_texture(renderer, "res/img/FlyFall.bmp");
+            } else if (player_frame <= 25) {
+                *player_texture = load_texture(renderer, "res/img/Fly1.bmp");
+            } else if (player_frame <= 30) {
+                *player_texture = load_texture(renderer, "res/img/Fly2.bmp");
+            } else if (player_frame <= 35) {
+                *player_texture = load_texture(renderer, "res/img/Fly3.bmp");
+            } else if (player_frame <= 40) {
+                *player_texture = load_texture(renderer, "res/img/FlyFall.bmp");
+            }
+        } else {
+            *player_texture = load_texture(renderer, "res/img/FlyFall.bmp");
         }
     }
 
@@ -150,7 +178,7 @@ int main(int argc, char *argv[]) {
     SDL_Texture *floor = load_texture(renderer, "res/img/floor.bmp");
     SDL_Texture *reverse_floor = load_texture(renderer, "res/img/floor_rvrs.bmp");
     SDL_Texture *roof = load_texture(renderer, "res/img/roof.bmp");
-    SDL_Texture *bullet_texture = load_texture(renderer, "bullet.bmp");
+    SDL_Texture *bullet_texture = load_texture(renderer, "res/img/bullet.bmp");
 
     SDL_FRect bg_rect = { 0, 0, 2740, 1000 }, reverse_bg_rect = { 2740, 0, 2740, 1000 };
     SDL_FRect roof_rect = { 0.0f, -40.0f, static_cast<float>(screen_width), 40.0f };
@@ -184,8 +212,11 @@ int main(int argc, char *argv[]) {
             bullet.shoot(player_rect.x);
         }
 
-        bullets.erase(std::remove_if(bullets.begin(), bullets.end(), [](const Bullet& b) {
-            return b.rect.x < -20.0f;
+        bullets.erase(std::remove_if(bullets.begin(), bullets.end(),
+        [&](const Bullet& b) {
+            bool out_of_bounds = b.rect.x < -b.rect.w || b.rect.y > screen_height + b.rect.h;
+            bool hit_floor = SDL_HasRectIntersectionFloat(&b.rect, &floor_rect) || SDL_HasRectIntersectionFloat(&b.rect, &reverse_floor_rect);
+            return out_of_bounds || hit_floor;
         }), bullets.end());
 
         if (++player_frame > 40) player_frame = 0;
