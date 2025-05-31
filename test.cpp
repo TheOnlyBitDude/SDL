@@ -327,8 +327,37 @@ int main(int argc, char *argv[]) {
 
     while (running) {
 
-        int lnch = rand() % 300 + 1;  // Random entre 1 y 300
 
+        // Ticks y eventos
+
+        now = SDL_GetTicks();
+        deltaTime = (now - last) / 1000.0f;
+        last = now;
+
+        while (SDL_PollEvent(&event)) {
+            if (event.type == SDL_EVENT_QUIT) running = 0;
+            if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
+                if (event.button.button == SDL_BUTTON_LEFT) {
+                    SDL_FPoint mouse_point = {
+                        static_cast<float>(event.button.x),
+                        static_cast<float>(event.button.y)
+                    };
+
+                    
+                    // Detección de click
+
+                    if (SDL_PointInRectFloat(&mouse_point, &player_rect)) {
+                        SDL_Log("Haz hecho clic sobre el jugadór.");
+                    }
+                }
+            }
+
+        }
+
+
+        // Misiles
+
+        int lnch = rand() % 300 + 1;
         if ((lnch == 126 || lnch == 173 || lnch == 111)) {
             missiles[0].update();
             missiles[0].launched = true;
@@ -361,10 +390,6 @@ int main(int argc, char *argv[]) {
             missiles[7].update();
             missiles[7].launched = true;
         }
-
-
-        barry.move(&fall, &player_x, &player_y, player_speed, deltaTime, &player_rect, &obstacle_rect, &roof_rect, &floor_rect, &reverse_floor_rect, &running);
-
         for (auto& missile : missiles) {
             if (missile.launched == true) {
                 missile.update();
@@ -375,26 +400,27 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        now = SDL_GetTicks();
-        deltaTime = (now - last) / 1000.0f;
-        last = now;
 
-        while (SDL_PollEvent(&event)) {
-            if (event.type == SDL_EVENT_QUIT) running = 0;
-        }
+        // Jugador     
 
+        barry.move(&fall, &player_x, &player_y, player_speed, deltaTime, &player_rect, &obstacle_rect, &roof_rect, &floor_rect, &reverse_floor_rect, &running);
         barry.handle_input(bullets, bullet_texture, player_rect);
+        
+
+        // Balas
 
         for (auto& bullet : bullets) {
             bullet.shoot(player_rect.x);
         }
-
         bullets.erase(std::remove_if(bullets.begin(), bullets.end(),
         [&](const Bullet& b) {
             bool out_of_bounds = b.rect.x < -b.rect.w || b.rect.y > screen_height + b.rect.h;
             bool hit_floor = SDL_HasRectIntersectionFloat(&b.rect, &floor_rect) || SDL_HasRectIntersectionFloat(&b.rect, &reverse_floor_rect);
             return out_of_bounds || hit_floor;
         }), bullets.end());
+
+
+        // Animaciones y renderizados
 
         if (++player_frame > 40) player_frame = 0;
         barry.animate(renderer, &player_texture, player_frame);
