@@ -7,6 +7,14 @@
 #include <algorithm>
 #include <limits>
 
+#include <AL/al.h>
+#include <AL/alc.h>
+#include <sndfile.h>
+#include <iostream>
+#include <vector>
+#include <thread>
+#include <chrono>
+
 void null_seed() {
     srand(time(NULL));
 }
@@ -28,6 +36,72 @@ SDL_Texture* load_texture(SDL_Renderer *renderer, const char *file_path) {
 
     return texture;
 }
+
+class Sound {
+private:
+    ALuint buffer, source;
+    ALCdevice* device;
+    ALCcontext* context;
+    bool initialized;
+
+public:
+    Sound(const char* filename) : buffer(0), source(0), initialized(false) {
+        device = alcOpenDevice(nullptr);
+        if (!device) {
+            std::cerr << "No se pudo abrir el dispositivo de audio.\n";
+            return;
+        }
+
+        context = alcCreateContext(device, nullptr);
+        alcMakeContextCurrent(context);
+
+        alGenBuffers(1, &buffer);
+        alGenSources(1, &source);
+
+        // Cargar el archivo de audio usando libsndfile
+        SF_INFO sfinfo;
+        SNDFILE* sndfile = sf_open(filename, SFM_READ, &sfinfo);
+        if (!sndfile) {
+            std::cerr << "No se pudo abrir el archivo de sonido: " << filename << "\n";
+            return;
+        }
+
+        std::vector<short> samples(sfinfo.frames * sfinfo.channels);
+        sf_read_short(sndfile, samples.data(), samples.size());
+        sf_close(sndfile);
+
+        ALenum format = (sfinfo.channels == 1) ? AL_FORMAT_MONO16 : AL_FORMAT_STEREO16;
+        alBufferData(buffer, format, samples.data(), samples.size() * sizeof(short), sfinfo.samplerate);
+        alSourcei(source, AL_BUFFER, buffer);
+
+        initialized = true;
+    }
+
+    ~Sound() {
+        if (initialized) {
+            alDeleteSources(1, &source);
+            alDeleteBuffers(1, &buffer);
+            alcMakeContextCurrent(nullptr);
+            alcDestroyContext(context);
+            alcCloseDevice(device);
+        }
+    }
+
+    void play() {
+        if (initialized) alSourcePlay(source);
+    }
+
+    void stop() {
+        if (initialized) alSourceStop(source);
+    }
+
+    bool get_busy() {
+        if (!initialized) return false;
+        ALint state;
+        alGetSourcei(source, AL_SOURCE_STATE, &state);
+        return state == AL_PLAYING;
+    }
+};
 
 class Bullet {
 public:
@@ -59,7 +133,7 @@ public:
 class Barry {
 public:
     std::string animation = "Run";
-    void move(float *fall, float *player_x, float *player_y, float player_speed, float deltaTime, SDL_FRect *player_rect, SDL_FRect *obstacle_rect, SDL_FRect *roof_rect, SDL_FRect *floor_rect, SDL_FRect *reverse_floor_rect, int *running) {
+    void move(float *fall, float *player_x, float *player_y, float player_speed, float deltaTime, SDL_FRect *player_rect, SDL_FRect *obstacle_rect, SDL_FRect *roof_rect, SDL_FRect *floor_rect, SDL_FRect *reverse_floor_rect, int *running, Sound* jetpack) {
         const bool *keyboard = SDL_GetKeyboardState(NULL);
         bool on_floor = SDL_HasRectIntersectionFloat(player_rect, floor_rect) || SDL_HasRectIntersectionFloat(player_rect, reverse_floor_rect);
         bool on_roof = SDL_HasRectIntersectionFloat(player_rect, roof_rect);
@@ -74,6 +148,8 @@ public:
                 *fall = 0.0f;
                 *player_y = roof_rect->y + roof_rect->h;
             }
+
+            if (!jetpack->get_busy()) jetpack->play();
         } else {
             *fall -= 0.75f;
             *player_y -= *fall;
@@ -182,14 +258,19 @@ public:
     std::string type;
     std::string orientation = "Down";
 
-    Missile(SDL_Renderer* rend, float x, float y, float width, float height, int spd, int dur, std::string type)
+    Sound* warning_sound;
+    Sound* launch_sound;
+
+    Missile(SDL_Renderer* rend, float x, float y, float width, float height, int spd, int dur, std::string type,
+            Sound* warning_sfx, Sound* launch_sfx)
         : renderer(rend), w(width), h(height), speed(spd), duration(dur),
           counter(0), i(0), wait(0), pre_launch(false), launched(false), f(false),
-          type(type)
+          type(type), warning_sound(warning_sfx), launch_sound(launch_sfx)
     {
         rect = { x, y, width, height };
         texture = load_texture(renderer, "res/img/Rocket1.bmp");
     }
+
 
     void animate() {
         if (counter >= 0 && counter < 2)
@@ -211,7 +292,9 @@ public:
         if (!pre_launch) {
             pos = static_cast<float>(20 + rand() % (668 - 20));
             rect.y = pos;
-            launched = false;;
+            launched = false;
+
+            if (warning_sound) warning_sound->play(); // Ejecuta sonido
         }
         launch();
     }
@@ -226,7 +309,7 @@ public:
         }
 
         if (wait == 34) {
-            // SFX
+            if (launch_sound) launch_sound->play(); // Ejecuta sonido
         }
 
         if (wait == 35) {
@@ -276,6 +359,7 @@ public:
     }
 };
 
+
 int main(int argc, char *argv[]) {
 
     for (int i = 1; i < argc; ++i) {  // start at 1 to skip the program name
@@ -318,10 +402,16 @@ int main(int argc, char *argv[]) {
     Barry barry;
     std::vector<Bullet> bullets;
 
+    // Inicialización de sonidos
+    Sound jetpack("res/snd/jetpack_fire.wav");
+    Sound warning("res/snd/Warning.wav");
+    Sound launch("res/snd/Launch.wav");
+
+    // Crear misiles
     std::vector<Missile> missiles;
     for (int i = 0; i < 7; ++i) {
-        if (i >= 4) missiles.emplace_back(renderer, 0, 2147483647, 93.0f, 34.0f, 50, 52, "wave");
-        else missiles.emplace_back(renderer, 0, 2147483647, 93.0f, 34.0f, 50, 52, "normal");
+        std::string type = (i >= 4) ? "wave" : "normal";
+        missiles.emplace_back(renderer, 0, 2147483647, 93.0f, 34.0f, 50, 52, type, &warning, &launch);
     }
 
 
@@ -403,7 +493,7 @@ int main(int argc, char *argv[]) {
 
         // Jugador     
 
-        barry.move(&fall, &player_x, &player_y, player_speed, deltaTime, &player_rect, &obstacle_rect, &roof_rect, &floor_rect, &reverse_floor_rect, &running);
+        barry.move(&fall, &player_x, &player_y, player_speed, deltaTime, &player_rect, &obstacle_rect, &roof_rect, &floor_rect, &reverse_floor_rect, &running, &jetpack);
         barry.handle_input(bullets, bullet_texture, player_rect);
         
 

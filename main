@@ -1,1 +1,1 @@
-g++ -std=c++11 -o open_window main.cpp -F /Library/Frameworks -framework SDL3 && ./open_window
+g++ -std=c++11 -o open_window main.cpp -F /Library/Frameworks -framework SDL3 -I/usr/local/opt/openal-soft/include -L/usr/local/opt/openal-soft/lib -lopenal -lsndfile -arch x86_64 && ./open_window

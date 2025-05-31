@@ -12,7 +12,10 @@
             "intelliSenseMode": "macos-clang-x64",
             "compilerArgs": [
                 "-F/Library/Frameworks",
-                "-framework SDL3"
+                "-framework SDL3",
+                "-I/usr/local/opt/openal-soft/include",
+                "-L/usr/local/opt/openal-soft/lib",
+                "-lopenal"
             ]
         }
     ],
