@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include <ctime>
 #include <algorithm>
+#include <limits>
 
 void null_seed() {
     srand(time(NULL));
@@ -177,10 +178,14 @@ public:
     bool f;
     float pos;
     float w, h;
+    float fall = 0;
+    std::string type;
+    std::string orientation = "Down";
 
-    Missile(SDL_Renderer* rend, float x, float y, float width, float height, int spd, int dur)
+    Missile(SDL_Renderer* rend, float x, float y, float width, float height, int spd, int dur, std::string type)
         : renderer(rend), w(width), h(height), speed(spd), duration(dur),
-          counter(0), i(0), wait(0), pre_launch(false), launched(false), f(false)
+          counter(0), i(0), wait(0), pre_launch(false), launched(false), f(false),
+          type(type)
     {
         rect = { x, y, width, height };
         texture = load_texture(renderer, "res/img/Rocket1.bmp");
@@ -206,7 +211,7 @@ public:
         if (!pre_launch) {
             pos = static_cast<float>(20 + rand() % (668 - 20));
             rect.y = pos;
-            launched = false;
+            launched = false;;
         }
         launch();
     }
@@ -226,8 +231,20 @@ public:
 
         if (wait == 35) {
             if (i != duration) {
-                rect.x -= static_cast<float>(speed);
-                i++;
+                if (type == "wave"){
+                    if (orientation == "Down") fall -= 0.75;
+                    else if (orientation == "Up") fall += 0.75;
+                    if (fall >= 10) orientation = "Down";
+                    else if (fall <= -10) orientation = "Up";
+                    pos += static_cast<float>(fall);
+                    rect.x -= static_cast<float>(speed);
+                    i++;
+                }
+                else {
+                    pos += static_cast<float>(fall);
+                    rect.x -= static_cast<float>(speed);
+                    i++;
+                }
             } else {
                 i = 0;
                 wait = 0;
@@ -267,7 +284,7 @@ int main(int argc, char *argv[]) {
     SDL_Event event;
 
     if (!SDL_Init(SDL_INIT_VIDEO)) return 3;
-    if (!SDL_CreateWindowAndRenderer("PyPack Joyride eta", screen_width, screen_height, SDL_WINDOW_RESIZABLE, &window, &renderer)) return 3;
+    if (!SDL_CreateWindowAndRenderer("PyPack Joyride beta", screen_width, screen_height, SDL_WINDOW_RESIZABLE, &window, &renderer)) return 3;
 
     SDL_Texture *player_texture = load_texture(renderer, "player.bmp");
     SDL_Texture *obstacle_texture = load_texture(renderer, "colision.bmp");
@@ -295,13 +312,14 @@ int main(int argc, char *argv[]) {
 
     std::vector<Missile> missiles;
     for (int i = 0; i < 7; ++i) {
-        missiles.emplace_back(renderer, 0, 0, 93.0f, 34.0f, 50, 52);
+        if (i >= 5) missiles.emplace_back(renderer, 0, 2147483647, 93.0f, 34.0f, 50, 52, "wave");
+        else missiles.emplace_back(renderer, 0, 2147483647, 93.0f, 34.0f, 50, 52, "normal");
     }
 
 
     while (running) {
 
-        int lnch = rand() % 225 + 1;  // Random entre 1 y 225
+        int lnch = rand() % 300 + 1;  // Random entre 1 y 300
 
         if ((lnch == 126 || lnch == 173 || lnch == 111)) {
             missiles[0].update();
@@ -330,6 +348,10 @@ int main(int argc, char *argv[]) {
         else if ((lnch == 250 || lnch == 110 || lnch == 180)) {
             missiles[6].update();
             missiles[6].launched = true;
+        }
+        else if ((lnch == 300 || lnch == 175 || lnch == 74)) {
+            missiles[7].update();
+            missiles[7].launched = true;
         }
 
 
