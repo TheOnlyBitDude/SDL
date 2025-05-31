@@ -211,8 +211,7 @@ public:
         if (!pre_launch) {
             pos = static_cast<float>(20 + rand() % (668 - 20));
             rect.y = pos;
-            launched = false;
-            std::string orientation = "Down";
+            launched = false;;
         }
         launch();
     }
@@ -233,8 +232,8 @@ public:
         if (wait == 35) {
             if (i != duration) {
                 if (type == "wave"){
-                    if (orientation == "Down") fall -= 0.5;
-                    else if (orientation == "Up") fall += 0.5;
+                    if (orientation == "Down") fall -= 0.75;
+                    else if (orientation == "Up") fall += 0.75;
                     if (fall >= 10) orientation = "Down";
                     else if (fall <= -10) orientation = "Up";
                     pos += static_cast<float>(fall);
@@ -278,6 +277,14 @@ public:
 };
 
 int main(int argc, char *argv[]) {
+
+    for (int i = 1; i < argc; ++i) {  // start at 1 to skip the program name
+        std::string arg = argv[i];
+        if (arg == "--arg1") {
+            int temporal_variable;
+        }
+    }
+
     null_seed();
     int screen_width = 1366, screen_height = 768;
     SDL_Window *window;
@@ -313,7 +320,7 @@ int main(int argc, char *argv[]) {
 
     std::vector<Missile> missiles;
     for (int i = 0; i < 7; ++i) {
-        if (i >= 6) missiles.emplace_back(renderer, 0, 2147483647, 93.0f, 34.0f, 50, 52, "wave");
+        if (i >= 4) missiles.emplace_back(renderer, 0, 2147483647, 93.0f, 34.0f, 50, 52, "wave");
         else missiles.emplace_back(renderer, 0, 2147483647, 93.0f, 34.0f, 50, 52, "normal");
     }
 

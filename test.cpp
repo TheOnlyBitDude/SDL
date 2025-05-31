@@ -277,6 +277,14 @@ public:
 };
 
 int main(int argc, char *argv[]) {
+
+    for (int i = 1; i < argc; ++i) {  // start at 1 to skip the program name
+        std::string arg = argv[i];
+        if (arg == "--arg1") {
+            int temporal_variable;
+        }
+    }
+
     null_seed();
     int screen_width = 1366, screen_height = 768;
     SDL_Window *window;
@@ -312,7 +320,7 @@ int main(int argc, char *argv[]) {
 
     std::vector<Missile> missiles;
     for (int i = 0; i < 7; ++i) {
-        if (i >= 5) missiles.emplace_back(renderer, 0, 2147483647, 93.0f, 34.0f, 50, 52, "wave");
+        if (i >= 4) missiles.emplace_back(renderer, 0, 2147483647, 93.0f, 34.0f, 50, 52, "wave");
         else missiles.emplace_back(renderer, 0, 2147483647, 93.0f, 34.0f, 50, 52, "normal");
     }
 
