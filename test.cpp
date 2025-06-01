@@ -104,34 +104,34 @@ public:
         
         if (animation == "Run") {
             if (player_frame <= 10) {
-                *player_texture = load_texture(renderer, "res/img/Walk1.bmp");
+                *player_texture = load_texture(renderer, "res/img/Walk1.png");
             } else if (player_frame <= 20) {
-                *player_texture = load_texture(renderer, "res/img/Walk2.bmp");
+                *player_texture = load_texture(renderer, "res/img/Walk2.png");
             } else if (player_frame <= 30) {
-                *player_texture = load_texture(renderer, "res/img/Walk3.bmp");
+                *player_texture = load_texture(renderer, "res/img/Walk3.png");
             } else if (player_frame <= 40) {
-                *player_texture = load_texture(renderer, "res/img/Walk4.bmp");
+                *player_texture = load_texture(renderer, "res/img/Walk4.png");
             }
         } else if (animation == "Fly") {
             if (player_frame <= 5) {
-                *player_texture = load_texture(renderer, "res/img/Fly1.bmp");
+                *player_texture = load_texture(renderer, "res/img/Fly1.png");
             } else if (player_frame <= 10) {
-                *player_texture = load_texture(renderer, "res/img/Fly2.bmp");
+                *player_texture = load_texture(renderer, "res/img/Fly2.png");
             } else if (player_frame <= 15) {
-                *player_texture = load_texture(renderer, "res/img/Fly3.bmp");
+                *player_texture = load_texture(renderer, "res/img/Fly3.png");
             } else if (player_frame <= 20) {
-                *player_texture = load_texture(renderer, "res/img/FlyFall.bmp");
+                *player_texture = load_texture(renderer, "res/img/FlyFall.png");
             } else if (player_frame <= 25) {
-                *player_texture = load_texture(renderer, "res/img/Fly1.bmp");
+                *player_texture = load_texture(renderer, "res/img/Fly1.png");
             } else if (player_frame <= 30) {
-                *player_texture = load_texture(renderer, "res/img/Fly2.bmp");
+                *player_texture = load_texture(renderer, "res/img/Fly2.png");
             } else if (player_frame <= 35) {
-                *player_texture = load_texture(renderer, "res/img/Fly3.bmp");
+                *player_texture = load_texture(renderer, "res/img/Fly3.png");
             } else if (player_frame <= 40) {
-                *player_texture = load_texture(renderer, "res/img/FlyFall.bmp");
+                *player_texture = load_texture(renderer, "res/img/FlyFall.png");
             }
         } else {
-            *player_texture = load_texture(renderer, "res/img/FlyFall.bmp");
+            *player_texture = load_texture(renderer, "res/img/FlyFall.png");
         }
     }
 
@@ -182,19 +182,19 @@ public:
           type(type)
     {
         rect = { x, y, width, height };
-        texture = load_texture(renderer, "res/img/Rocket1.bmp");
+        texture = load_texture(renderer, "res/img/Rocket1.png");
     }
 
 
     void animate() {
         if (counter >= 0 && counter < 2)
-            texture = load_texture(renderer, "res/img/Rocket1.bmp");
+            texture = load_texture(renderer, "res/img/Rocket1.png");
         else if (counter >= 2 && counter < 4)
-            texture = load_texture(renderer, "res/img/Rocket2.bmp");
+            texture = load_texture(renderer, "res/img/Rocket2.png");
         else if (counter >= 4 && counter < 6)
-            texture = load_texture(renderer, "res/img/Rocket3.bmp");
+            texture = load_texture(renderer, "res/img/Rocket3.png");
         else if (counter >= 6 && counter < 8)
-            texture = load_texture(renderer, "res/img/Rocket4.bmp");
+            texture = load_texture(renderer, "res/img/Rocket4.png");
 
         counter++;
         if (counter >= 8)
@@ -292,14 +292,13 @@ int main(int argc, char *argv[]) {
     if (!SDL_Init(SDL_INIT_VIDEO)) return 3;
     if (!SDL_CreateWindowAndRenderer("PyPack Joyride beta", screen_width, screen_height, SDL_WINDOW_RESIZABLE, &window, &renderer)) return 3;
 
-    SDL_Texture *player_texture = load_texture(renderer, "player.bmp");
-    SDL_Texture *obstacle_texture = load_texture(renderer, "colision.bmp");
-    SDL_Texture *background = load_texture(renderer, "res/img/bg.bmp");
-    SDL_Texture *reverse_background = load_texture(renderer, "res/img/bg_rvrs.bmp");
-    SDL_Texture *floor = load_texture(renderer, "res/img/floor.bmp");
-    SDL_Texture *reverse_floor = load_texture(renderer, "res/img/floor_rvrs.bmp");
-    SDL_Texture *roof = load_texture(renderer, "res/img/roof.bmp");
-    SDL_Texture *bullet_texture = load_texture(renderer, "res/img/bullet.bmp");
+    SDL_Texture *player_texture = load_texture(renderer, "res/img/Walk1.png");
+    SDL_Texture *background = load_texture(renderer, "res/img/bg.jpg");
+    SDL_Texture *reverse_background = load_texture(renderer, "res/img/bg_rvrs.jpg");
+    SDL_Texture *floor = load_texture(renderer, "res/img/floor.png");
+    SDL_Texture *reverse_floor = load_texture(renderer, "res/img/floor_rvrs.png");
+    SDL_Texture *roof = load_texture(renderer, "res/img/roof.png");
+    SDL_Texture *bullet_texture = load_texture(renderer, "res/img/bullet.png");
 
     SDL_FRect bg_rect = { 0, 0, 2740, 1000 }, reverse_bg_rect = { 2740, 0, 2740, 1000 };
     SDL_FRect roof_rect = { 0.0f, -40.0f, static_cast<float>(screen_width), 40.0f };
@@ -429,7 +428,6 @@ int main(int argc, char *argv[]) {
         SDL_RenderClear(renderer);
         SDL_RenderTexture(renderer, background, NULL, &bg_rect);
         SDL_RenderTexture(renderer, reverse_background, NULL, &reverse_bg_rect);
-        SDL_RenderTexture(renderer, obstacle_texture, NULL, &obstacle_rect);
         SDL_RenderTexture(renderer, player_texture, NULL, &player_rect);
         SDL_RenderTexture(renderer, roof, NULL, &roof_rect);
         SDL_RenderTexture(renderer, floor, NULL, &floor_rect);
@@ -452,7 +450,6 @@ int main(int argc, char *argv[]) {
     SDL_DestroyTexture(floor);
     SDL_DestroyTexture(reverse_floor);
     SDL_DestroyTexture(player_texture);
-    SDL_DestroyTexture(obstacle_texture);
     SDL_DestroyTexture(roof);
     SDL_DestroyTexture(bullet_texture);
     SDL_DestroyRenderer(renderer);
