@@ -1,5 +1,6 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
+#include <SDL3_image/SDL_image.h>
 #include <string>
 #include <vector>
 #include <cstdlib>
@@ -11,23 +12,16 @@ void null_seed() {
     srand(time(NULL));
 }
 
+
 SDL_Texture* load_texture(SDL_Renderer *renderer, const char *file_path) {
-    SDL_Surface *surface = SDL_LoadBMP(file_path);
-    if (!surface) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to load BMP: %s", SDL_GetError());
-        return NULL;
-    }
-
-    SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, surface);
-    SDL_DestroySurface(surface);
-
+    SDL_Texture *texture = IMG_LoadTexture(renderer, file_path);
     if (!texture) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to create texture: %s", SDL_GetError());
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to load image '%s': %s", file_path, SDL_GetError());
         return NULL;
     }
-
     return texture;
 }
+
 
 class Bullet {
 public:
@@ -191,6 +185,7 @@ public:
         texture = load_texture(renderer, "res/img/Rocket1.bmp");
     }
 
+
     void animate() {
         if (counter >= 0 && counter < 2)
             texture = load_texture(renderer, "res/img/Rocket1.bmp");
@@ -211,7 +206,9 @@ public:
         if (!pre_launch) {
             pos = static_cast<float>(20 + rand() % (668 - 20));
             rect.y = pos;
-            launched = false;;
+            launched = false;
+
+            // Warning
         }
         launch();
     }
@@ -226,7 +223,7 @@ public:
         }
 
         if (wait == 34) {
-            // SFX
+            // Launch
         }
 
         if (wait == 35) {
@@ -276,6 +273,7 @@ public:
     }
 };
 
+
 int main(int argc, char *argv[]) {
 
     for (int i = 1; i < argc; ++i) {  // start at 1 to skip the program name
@@ -318,10 +316,11 @@ int main(int argc, char *argv[]) {
     Barry barry;
     std::vector<Bullet> bullets;
 
+    // Crear misiles
     std::vector<Missile> missiles;
     for (int i = 0; i < 7; ++i) {
-        if (i >= 4) missiles.emplace_back(renderer, 0, 2147483647, 93.0f, 34.0f, 50, 52, "wave");
-        else missiles.emplace_back(renderer, 0, 2147483647, 93.0f, 34.0f, 50, 52, "normal");
+        std::string type = (i >= 4) ? "wave" : "normal";
+        missiles.emplace_back(renderer, 0, 2147483647, 93.0f, 34.0f, 50, 52, type);
     }
 
 
@@ -399,7 +398,7 @@ int main(int argc, char *argv[]) {
                 running = 0;
             }
         }
-
+        
 
         // Jugador     
 
@@ -459,6 +458,5 @@ int main(int argc, char *argv[]) {
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();
-
     return 0;
 }
