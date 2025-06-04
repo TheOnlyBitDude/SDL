@@ -337,12 +337,13 @@ int main(int argc, char *argv[]) {
     SDL_Window *window;
     SDL_Renderer *renderer;
     SDL_Event event;
-    TTF_Font* font = TTF_OpenFont("res/fnt/ModernDOS9x16.ttf", 24);
     SDL_Color white = {255, 255, 255, 255};
 
     if (!SDL_Init(SDL_INIT_VIDEO)) return 3;
     if (!SDL_CreateWindowAndRenderer("PyPack Joyride beta", screen_width, screen_height, SDL_WINDOW_RESIZABLE, &window, &renderer)) return 3;
     if (!TTF_Init()) return 3;
+
+    TTF_Font* font = TTF_OpenFont("res/fnt/ModernDOS9x16.ttf", 24);
 
     SDL_Texture *player_texture = load_texture(renderer, "res/img/Walk1.png");
     SDL_Texture *background = load_texture(renderer, "res/img/bg.jpg");
@@ -375,7 +376,7 @@ int main(int argc, char *argv[]) {
     }
 
     TextLabel label(renderer);
-    label.setText("Hello World!", font, white, 100.0f, 50.0f);
+    label.setText("Warning!", font, white, 100.0f, 50.0f);
 
     std::string stage = "Warning";
     SDL_FRect window_rect {0.0f, 0.0f, static_cast<float>(screen_width), static_cast<float>(screen_height)};
@@ -410,6 +411,12 @@ int main(int argc, char *argv[]) {
             }
         }
 
+        SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xFF);
+        SDL_RenderClear(renderer);
+
+        if (stage == "Warning"){
+            label.render();
+        }
         if (stage == "Game") {
 
             // Misiles
@@ -483,8 +490,7 @@ int main(int argc, char *argv[]) {
             barry.animate(renderer, &player_texture, player_frame);
             update_background_scroll(&floor_rect, &reverse_floor_rect, &bg_rect, &reverse_bg_rect);
 
-            SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xFF);
-            SDL_RenderClear(renderer);
+
             SDL_RenderTexture(renderer, background, NULL, &bg_rect);
             SDL_RenderTexture(renderer, reverse_background, NULL, &reverse_bg_rect);
             SDL_RenderTexture(renderer, player_texture, NULL, &player_rect);
