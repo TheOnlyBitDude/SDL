@@ -1,6 +1,7 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 #include <SDL3_image/SDL_image.h>
+#include <SDL3_ttf/SDL_ttf.h>
 #include <string>
 #include <vector>
 #include <cstdlib>
@@ -22,6 +23,54 @@ SDL_Texture* load_texture(SDL_Renderer *renderer, const char *file_path) {
     return texture;
 }
 
+class TextLabel {
+public:
+    SDL_Texture* texture;
+    SDL_FRect rect;
+    SDL_Color color;
+    TTF_Font* font;
+    SDL_Renderer* renderer;
+
+    TextLabel(SDL_Renderer* rend)
+        : texture(nullptr), font(nullptr), renderer(rend) {}
+
+    ~TextLabel() {
+        if (texture) SDL_DestroyTexture(texture);
+    }
+
+    bool setText(const std::string& text, TTF_Font* font, SDL_Color color, float x, float y) {
+        if (texture) {
+            SDL_DestroyTexture(texture);
+            texture = nullptr;
+        }
+
+        this->font = font;
+        this->color = color;
+
+        SDL_Surface* surface = TTF_RenderText_Blended(font, text.c_str(), text.length(), color);
+        if (!surface) {
+            SDL_Log("Error al renderizar texto: %s", SDL_GetError());
+            return false;
+        }
+
+        texture = SDL_CreateTextureFromSurface(renderer, surface);
+        if (!texture) {
+            SDL_Log("Error al crear textura desde superficie: %s", SDL_GetError());
+            SDL_DestroySurface(surface);
+            return false;
+        }
+
+        rect = { x, y, static_cast<float>(surface->w), static_cast<float>(surface->h) };
+        SDL_DestroySurface(surface);
+        return true;
+    }
+
+    void render() const {
+        if (texture) {
+            SDL_RenderTexture(renderer, texture, nullptr, &rect);
+        }
+    }
+};
 
 class Bullet {
 public:
@@ -288,9 +337,12 @@ int main(int argc, char *argv[]) {
     SDL_Window *window;
     SDL_Renderer *renderer;
     SDL_Event event;
+    TTF_Font* font = TTF_OpenFont("res/fnt/ModernDOS9x16.ttf", 24);
+    SDL_Color white = {255, 255, 255, 255};
 
     if (!SDL_Init(SDL_INIT_VIDEO)) return 3;
     if (!SDL_CreateWindowAndRenderer("PyPack Joyride beta", screen_width, screen_height, SDL_WINDOW_RESIZABLE, &window, &renderer)) return 3;
+    if (!TTF_Init()) return 3;
 
     SDL_Texture *player_texture = load_texture(renderer, "res/img/Walk1.png");
     SDL_Texture *background = load_texture(renderer, "res/img/bg.jpg");
@@ -322,6 +374,12 @@ int main(int argc, char *argv[]) {
         missiles.emplace_back(renderer, 0, 2147483647, 93.0f, 34.0f, 50, 52, type);
     }
 
+    TextLabel label(renderer);
+    label.setText("Hello World!", font, white, 100.0f, 50.0f);
+
+    std::string stage = "Warning";
+    SDL_FRect window_rect {0.0f, 0.0f, static_cast<float>(screen_width), static_cast<float>(screen_height)};
+
 
     while (running) {
 
@@ -344,101 +402,103 @@ int main(int argc, char *argv[]) {
                     
                     // Detección de click
 
+                    if (SDL_PointInRectFloat(&mouse_point, &window_rect)) stage = "Game";
                     if (SDL_PointInRectFloat(&mouse_point, &player_rect)) {
                         SDL_Log("Haz hecho clic sobre el jugadór.");
                     }
                 }
             }
-
         }
 
+        if (stage == "Game") {
 
-        // Misiles
+            // Misiles
 
-        int lnch = rand() % 300 + 1;
-        if ((lnch == 126 || lnch == 173 || lnch == 111)) {
-            missiles[0].update();
-            missiles[0].launched = true;
-        }
-        else if ((lnch == 222 || lnch == 109 || lnch == 63)) {
-            missiles[1].update();
-            missiles[1].launched = true;
-        }
-        else if ((lnch == 35 || lnch == 17 || lnch == 39)) {
-            missiles[2].update();
-            missiles[2].launched = true;
-        }
-        else if ((lnch == 2 || lnch == 44 || lnch == 22)) {
-            missiles[3].update();
-            missiles[3].launched = true;
-        }
-        else if ((lnch == 134 || lnch == 127 || lnch == 159)) {
-            missiles[4].update();
-            missiles[4].launched = true;
-        }
-        else if ((lnch == 241 || lnch == 149 || lnch == 197)) {
-            missiles[5].update();
-            missiles[5].launched = true;
-        }
-        else if ((lnch == 250 || lnch == 110 || lnch == 180)) {
-            missiles[6].update();
-            missiles[6].launched = true;
-        }
-        else if ((lnch == 300 || lnch == 175 || lnch == 74)) {
-            missiles[7].update();
-            missiles[7].launched = true;
-        }
-        for (auto& missile : missiles) {
-            if (missile.launched == true) {
-                missile.update();
+            int lnch = rand() % 300 + 1;
+            if ((lnch == 126 || lnch == 173 || lnch == 111)) {
+                missiles[0].update();
+                missiles[0].launched = true;
             }
-            if (missile.collides_with(player_rect)) {
-                SDL_Log("Jugador alcanzado por misil. Fin del juego.");
-                running = 0;
+            else if ((lnch == 222 || lnch == 109 || lnch == 63)) {
+                missiles[1].update();
+                missiles[1].launched = true;
             }
-        }
-        
+            else if ((lnch == 35 || lnch == 17 || lnch == 39)) {
+                missiles[2].update();
+                missiles[2].launched = true;
+            }
+            else if ((lnch == 2 || lnch == 44 || lnch == 22)) {
+                missiles[3].update();
+                missiles[3].launched = true;
+            }
+            else if ((lnch == 134 || lnch == 127 || lnch == 159)) {
+                missiles[4].update();
+                missiles[4].launched = true;
+            }
+            else if ((lnch == 241 || lnch == 149 || lnch == 197)) {
+                missiles[5].update();
+                missiles[5].launched = true;
+            }
+            else if ((lnch == 250 || lnch == 110 || lnch == 180)) {
+                missiles[6].update();
+                missiles[6].launched = true;
+            }
+            else if ((lnch == 300 || lnch == 175 || lnch == 74)) {
+                missiles[7].update();
+                missiles[7].launched = true;
+            }
+            for (auto& missile : missiles) {
+                if (missile.launched == true) {
+                    missile.update();
+                }
+                if (missile.collides_with(player_rect)) {
+                    SDL_Log("Jugador alcanzado por misil. Fin del juego.");
+                    running = 0;
+                }
+            }
+            
 
-        // Jugador     
+            // Jugador     
 
-        barry.move(&fall, &player_x, &player_y, player_speed, deltaTime, &player_rect, &obstacle_rect, &roof_rect, &floor_rect, &reverse_floor_rect, &running);
-        barry.handle_input(bullets, bullet_texture, player_rect);
-        
+            barry.move(&fall, &player_x, &player_y, player_speed, deltaTime, &player_rect, &obstacle_rect, &roof_rect, &floor_rect, &reverse_floor_rect, &running);
+            barry.handle_input(bullets, bullet_texture, player_rect);
+            
 
-        // Balas
+            // Balas
 
-        for (auto& bullet : bullets) {
-            bullet.shoot(player_rect.x);
-        }
-        bullets.erase(std::remove_if(bullets.begin(), bullets.end(),
-        [&](const Bullet& b) {
-            bool out_of_bounds = b.rect.x < -b.rect.w || b.rect.y > screen_height + b.rect.h;
-            bool hit_floor = SDL_HasRectIntersectionFloat(&b.rect, &floor_rect) || SDL_HasRectIntersectionFloat(&b.rect, &reverse_floor_rect);
-            return out_of_bounds || hit_floor;
-        }), bullets.end());
+            for (auto& bullet : bullets) {
+                bullet.shoot(player_rect.x);
+            }
+            bullets.erase(std::remove_if(bullets.begin(), bullets.end(),
+            [&](const Bullet& b) {
+                bool out_of_bounds = b.rect.x < -b.rect.w || b.rect.y > screen_height + b.rect.h;
+                bool hit_floor = SDL_HasRectIntersectionFloat(&b.rect, &floor_rect) || SDL_HasRectIntersectionFloat(&b.rect, &reverse_floor_rect);
+                return out_of_bounds || hit_floor;
+            }), bullets.end());
 
 
-        // Animaciones y renderizados
+            // Animaciones y renderizados
 
-        if (++player_frame > 40) player_frame = 0;
-        barry.animate(renderer, &player_texture, player_frame);
-        update_background_scroll(&floor_rect, &reverse_floor_rect, &bg_rect, &reverse_bg_rect);
+            if (++player_frame > 40) player_frame = 0;
+            barry.animate(renderer, &player_texture, player_frame);
+            update_background_scroll(&floor_rect, &reverse_floor_rect, &bg_rect, &reverse_bg_rect);
 
-        SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xFF);
-        SDL_RenderClear(renderer);
-        SDL_RenderTexture(renderer, background, NULL, &bg_rect);
-        SDL_RenderTexture(renderer, reverse_background, NULL, &reverse_bg_rect);
-        SDL_RenderTexture(renderer, player_texture, NULL, &player_rect);
-        SDL_RenderTexture(renderer, roof, NULL, &roof_rect);
-        SDL_RenderTexture(renderer, floor, NULL, &floor_rect);
-        SDL_RenderTexture(renderer, reverse_floor, NULL, &reverse_floor_rect);
+            SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xFF);
+            SDL_RenderClear(renderer);
+            SDL_RenderTexture(renderer, background, NULL, &bg_rect);
+            SDL_RenderTexture(renderer, reverse_background, NULL, &reverse_bg_rect);
+            SDL_RenderTexture(renderer, player_texture, NULL, &player_rect);
+            SDL_RenderTexture(renderer, roof, NULL, &roof_rect);
+            SDL_RenderTexture(renderer, floor, NULL, &floor_rect);
+            SDL_RenderTexture(renderer, reverse_floor, NULL, &reverse_floor_rect);
 
-        for (auto& bullet : bullets) {
-            bullet.render(renderer);
-        }
+            for (auto& bullet : bullets) {
+                bullet.render(renderer);
+            }
 
-        for (auto& missile : missiles) {
-            missile.render();
+            for (auto& missile : missiles) {
+                missile.render();
+            }
         }
 
         SDL_RenderPresent(renderer);
@@ -455,5 +515,6 @@ int main(int argc, char *argv[]) {
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();
+    TTF_Quit();
     return 0;
 }
