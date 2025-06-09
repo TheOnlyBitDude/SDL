@@ -11,8 +11,30 @@
 #include <algorithm>
 #include <limits>
 
-#include "res/img/bullet.h"  // generado con xxd -i
-#include <SDL3_image/SDL_image.h>
+#include "res/img/BarryDead.h"  // generado con xxd -i
+#include "res/img/bg_rvrs.h"
+#include "res/img/bg.h"
+#include "res/img/booster.h"
+#include "res/img/bullet.h"
+#include "res/img/elektrik_vert.h"
+#include "res/img/elektrik.h"
+#include "res/img/floor_rvrs.h"
+#include "res/img/floor.h"
+#include "res/img/Fly1.h"
+#include "res/img/Fly2.h"
+#include "res/img/Fly3.h"
+#include "res/img/FlyFall.h"
+#include "res/img/Koin.h"
+#include "res/img/Missile_Target.h"
+#include "res/img/Rocket1.h"
+#include "res/img/Rocket2.h"
+#include "res/img/Rocket3.h"
+#include "res/img/Rocket4.h"
+#include "res/img/Roof.h"
+#include "res/img/Walk1.h"
+#include "res/img/Walk2.h"
+#include "res/img/Walk3.h"
+#include "res/img/Walk4.h"
 
 SDL_Texture* load_texture_from_memory(SDL_Renderer* renderer,
                                       const unsigned char* data,
