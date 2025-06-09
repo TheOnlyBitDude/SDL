@@ -1,5 +1,6 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
+#include <SDL3/SDL_iostream.h>
 #include <SDL3_image/SDL_image.h>
 #include <SDL3_ttf/SDL_ttf.h>
 #include <iostream>
@@ -9,6 +10,51 @@
 #include <ctime>
 #include <algorithm>
 #include <limits>
+
+#include "res/img/BarryDead.h"  // generado con xxd -i "input" > "output"
+#include "res/img/bg_rvrs.h"
+#include "res/img/bg.h"
+#include "res/img/booster.h"
+#include "res/img/bullet.h"
+#include "res/img/elektrik_vert.h"
+#include "res/img/elektrik.h"
+#include "res/img/floor_rvrs.h"
+#include "res/img/floor.h"
+#include "res/img/Fly1.h"
+#include "res/img/Fly2.h"
+#include "res/img/Fly3.h"
+#include "res/img/FlyFall.h"
+#include "res/img/Koin.h"
+#include "res/img/Missile_Target.h"
+#include "res/img/Rocket1.h"
+#include "res/img/Rocket2.h"
+#include "res/img/Rocket3.h"
+#include "res/img/Rocket4.h"
+#include "res/img/Roof.h"
+#include "res/img/Walk1.h"
+#include "res/img/Walk2.h"
+#include "res/img/Walk3.h"
+#include "res/img/Walk4.h"
+
+SDL_Texture* load_texture_from_memory(SDL_Renderer* renderer,
+                                      const unsigned char* data,
+                                      unsigned int data_len)
+{
+    SDL_IOStream* io = SDL_IOFromConstMem((void*)data, data_len);
+    if (!io) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                     "SDL_IOFromConstMem error: %s", SDL_GetError());
+        return nullptr;
+    }
+    SDL_Texture* tex = IMG_LoadTexture_IO(renderer, io, true);
+    if (!tex) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                     "IMG_LoadTexture_IO error: %s", SDL_GetError());
+        return nullptr;
+    }
+
+    return tex;
+}
 
 void null_seed() {
     srand(time(NULL));
@@ -154,34 +200,34 @@ public:
         
         if (animation == "Run") {
             if (player_frame <= 10) {
-                *player_texture = load_texture(renderer, "res/img/Walk1.png");
+                *player_texture = load_texture_from_memory(renderer, res_img_Walk1_png, res_img_Walk1_png_len);
             } else if (player_frame <= 20) {
-                *player_texture = load_texture(renderer, "res/img/Walk2.png");
+                *player_texture = load_texture_from_memory(renderer, res_img_Walk2_png, res_img_Walk2_png_len);
             } else if (player_frame <= 30) {
-                *player_texture = load_texture(renderer, "res/img/Walk3.png");
+                *player_texture = load_texture_from_memory(renderer, res_img_Walk3_png, res_img_Walk3_png_len);
             } else if (player_frame <= 40) {
-                *player_texture = load_texture(renderer, "res/img/Walk4.png");
+                *player_texture = load_texture_from_memory(renderer, res_img_Walk4_png, res_img_Walk4_png_len);
             }
         } else if (animation == "Fly") {
             if (player_frame <= 5) {
-                *player_texture = load_texture(renderer, "res/img/Fly1.png");
+                *player_texture = load_texture_from_memory(renderer, res_img_Fly1_png, res_img_Fly1_png_len);
             } else if (player_frame <= 10) {
-                *player_texture = load_texture(renderer, "res/img/Fly2.png");
+                *player_texture = load_texture_from_memory(renderer, res_img_Fly2_png, res_img_Fly2_png_len);
             } else if (player_frame <= 15) {
-                *player_texture = load_texture(renderer, "res/img/Fly3.png");
+                *player_texture = load_texture_from_memory(renderer, res_img_Fly3_png, res_img_Fly3_png_len);
             } else if (player_frame <= 20) {
-                *player_texture = load_texture(renderer, "res/img/FlyFall.png");
+                *player_texture = load_texture_from_memory(renderer, res_img_FlyFall_png, res_img_FlyFall_png_len);
             } else if (player_frame <= 25) {
-                *player_texture = load_texture(renderer, "res/img/Fly1.png");
+                *player_texture = load_texture_from_memory(renderer, res_img_Fly1_png, res_img_Fly1_png_len);
             } else if (player_frame <= 30) {
-                *player_texture = load_texture(renderer, "res/img/Fly2.png");
+                *player_texture = load_texture_from_memory(renderer, res_img_Fly2_png, res_img_Fly2_png_len);
             } else if (player_frame <= 35) {
-                *player_texture = load_texture(renderer, "res/img/Fly3.png");
+                *player_texture = load_texture_from_memory(renderer, res_img_Fly3_png, res_img_Fly3_png_len);
             } else if (player_frame <= 40) {
-                *player_texture = load_texture(renderer, "res/img/FlyFall.png");
+                *player_texture = load_texture_from_memory(renderer, res_img_FlyFall_png, res_img_FlyFall_png_len);
             }
         } else {
-            *player_texture = load_texture(renderer, "res/img/FlyFall.png");
+            *player_texture = load_texture_from_memory(renderer, res_img_FlyFall_png, res_img_FlyFall_png_len);
         }
     }
 
@@ -232,19 +278,19 @@ public:
           type(type)
     {
         rect = { x, y, width, height };
-        texture = load_texture(renderer, "res/img/Rocket1.png");
+        texture = load_texture_from_memory(renderer, res_img_Rocket1_png, res_img_Rocket1_png_len);
     }
 
 
     void animate() {
         if (counter >= 0 && counter < 2)
-            texture = load_texture(renderer, "res/img/Rocket1.png");
+            texture = load_texture_from_memory(renderer, res_img_Rocket1_png, res_img_Rocket1_png_len);
         else if (counter >= 2 && counter < 4)
-            texture = load_texture(renderer, "res/img/Rocket2.png");
+            texture = load_texture_from_memory(renderer, res_img_Rocket2_png, res_img_Rocket2_png_len);
         else if (counter >= 4 && counter < 6)
-            texture = load_texture(renderer, "res/img/Rocket3.png");
+            texture = load_texture_from_memory(renderer, res_img_Rocket3_png, res_img_Rocket3_png_len);
         else if (counter >= 6 && counter < 8)
-            texture = load_texture(renderer, "res/img/Rocket4.png");
+            texture = load_texture_from_memory(renderer, res_img_Rocket4_png, res_img_Rocket4_png_len);
 
         counter++;
         if (counter >= 8)
@@ -346,13 +392,15 @@ int main(int argc, char *argv[]) {
 
     TTF_Font* font = TTF_OpenFont("res/fnt/ModernDOS9x16.ttf", 24);
 
-    SDL_Texture *player_texture = load_texture(renderer, "res/img/Walk1.png");
-    SDL_Texture *background = load_texture(renderer, "res/img/bg.jpg");
-    SDL_Texture *reverse_background = load_texture(renderer, "res/img/bg_rvrs.jpg");
-    SDL_Texture *floor = load_texture(renderer, "res/img/floor.png");
-    SDL_Texture *reverse_floor = load_texture(renderer, "res/img/floor_rvrs.png");
-    SDL_Texture *roof = load_texture(renderer, "res/img/roof.png");
-    SDL_Texture *bullet_texture = load_texture(renderer, "res/img/bullet.png");
+    SDL_Texture *player_texture = load_texture_from_memory(renderer, res_img_Walk1_png, res_img_Walk1_png_len);
+    SDL_Texture *background = load_texture_from_memory(renderer, res_img_bg_jpg, res_img_bg_jpg_len);
+    SDL_Texture *reverse_background = load_texture_from_memory(renderer, res_img_bg_rvrs_jpg, res_img_bg_rvrs_jpg_len);
+    SDL_Texture *floor = load_texture_from_memory(renderer, res_img_floor_png, res_img_floor_png_len);
+    SDL_Texture *reverse_floor = load_texture_from_memory(renderer, res_img_floor_rvrs_png, res_img_floor_rvrs_png_len);
+    SDL_Texture *roof = load_texture_from_memory(renderer, res_img_roof_png, res_img_roof_png_len);
+    SDL_Texture *bullet_texture = load_texture_from_memory(renderer, res_img_bullet_png, res_img_bullet_png_len);
+
+
 
     SDL_FRect bg_rect = { 0, 0, 2740, 1000 }, reverse_bg_rect = { 2740, 0, 2740, 1000 };
     SDL_FRect roof_rect = { 0.0f, -40.0f, static_cast<float>(screen_width), 40.0f };
