@@ -375,10 +375,13 @@ int main(int argc, char *argv[]) {
         missiles.emplace_back(renderer, 0, 2147483647, 93.0f, 34.0f, 50, 52, type);
     }
 
-    TextLabel label(renderer);
-    label.setText("Warning!", font, white, 100.0f, 50.0f);
+    TextLabel title(renderer);
+    TextLabel Lost(renderer);
+    title.setText("PyPack_Joyride!", font, white, static_cast<float>((screen_width / 2.5f) - title.rect.w), 50.0f);
+    Lost.setText("You lost! Press anywhere to continue...", font, white, static_cast<float>((screen_width - Lost.rect.w) / 2.0f), 50.0f);
 
-    std::string stage = "Warning";
+
+    std::string stage = "Title";
     SDL_FRect window_rect {0.0f, 0.0f, static_cast<float>(screen_width), static_cast<float>(screen_height)};
 
 
@@ -414,8 +417,11 @@ int main(int argc, char *argv[]) {
         SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xFF);
         SDL_RenderClear(renderer);
 
-        if (stage == "Warning"){
-            label.render();
+        if (stage == "Title"){
+            title.render();
+        }
+        if (stage == "Lost"){
+            Lost.render();
         }
         if (stage == "Game") {
 
@@ -459,8 +465,7 @@ int main(int argc, char *argv[]) {
                     missile.update();
                 }
                 if (missile.collides_with(player_rect)) {
-                    SDL_Log("Jugador alcanzado por misil. Fin del juego.");
-                    running = 0;
+                    stage = "Lost";
                 }
             }
             
