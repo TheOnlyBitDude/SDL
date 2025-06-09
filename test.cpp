@@ -11,7 +11,7 @@
 #include <algorithm>
 #include <limits>
 
-#include "res/img/bullet_png.h"  // generado con xxd -i
+#include "res/img/bullet.h"  // generado con xxd -i
 #include <SDL3_image/SDL_image.h>
 
 SDL_Texture* load_texture_from_memory(SDL_Renderer* renderer,
@@ -382,9 +382,7 @@ int main(int argc, char *argv[]) {
     SDL_Texture *reverse_floor = load_texture(renderer, "res/img/floor_rvrs.png");
     SDL_Texture *roof = load_texture(renderer, "res/img/roof.png");
     SDL_Texture* bullet_texture =
-    load_texture_from_memory(renderer,
-                             res_img_bullet_png,
-                             res_img_bullet_png_len);
+    load_texture_from_memory(renderer, res_img_bullet_png, res_img_bullet_png_len);
 
 
 
