@@ -36,6 +36,8 @@
 #include "res/img/Walk3.h"
 #include "res/img/Walk4.h"
 
+#include "res/fnt/MS-DOS.h"
+
 SDL_Texture* load_texture_from_memory(SDL_Renderer* renderer,
                                       const unsigned char* data,
                                       unsigned int data_len)
@@ -55,6 +57,29 @@ SDL_Texture* load_texture_from_memory(SDL_Renderer* renderer,
 
     return tex;
 }
+
+
+TTF_Font* load_font_from_memory(const unsigned char* data,
+                                unsigned int data_len,
+                                int pt_size)
+{
+    SDL_IOStream* io = SDL_IOFromConstMem((void*)data, data_len);
+    if (!io) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                     "SDL_IOFromConstMem (font) error: %s", SDL_GetError());
+        return nullptr;
+    }
+
+    TTF_Font* font = TTF_OpenFontIO(io, true, pt_size);
+    if (!font) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                     "TTF_OpenFontIO error: %s", SDL_GetError());
+        return nullptr;
+    }
+
+    return font;
+}
+
 
 void null_seed() {
     srand(time(NULL));
@@ -389,7 +414,12 @@ int main(int argc, char *argv[]) {
     if (!SDL_CreateWindowAndRenderer("PyPack Joyride beta", screen_width, screen_height, SDL_WINDOW_BORDERLESS, &window, &renderer)) return 3;
     if (!TTF_Init()) return 3;
 
-    TTF_Font* font = TTF_OpenFont("res/fnt/ModernDOS9x16.ttf", 24);
+    TTF_Font* font = load_font_from_memory(res_fnt_ModernDOS9x16_ttf,
+                                       res_fnt_ModernDOS9x16_ttf_len,
+                                       32);  // empieza con 16 pt
+
+    TTF_SetFontHinting(font, TTF_HINTING_MONO);  // opcional pero recomendable
+
 
     SDL_Texture *player_texture = load_texture_from_memory(renderer, res_img_Walk1_png, res_img_Walk1_png_len);
     SDL_Texture *background = load_texture_from_memory(renderer, res_img_bg_jpg, res_img_bg_jpg_len);

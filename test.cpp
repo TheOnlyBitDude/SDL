@@ -36,6 +36,8 @@
 #include "res/img/Walk3.h"
 #include "res/img/Walk4.h"
 
+#include "res/fnt/MS-DOS.h"
+
 SDL_Texture* load_texture_from_memory(SDL_Renderer* renderer,
                                       const unsigned char* data,
                                       unsigned int data_len)
@@ -55,6 +57,29 @@ SDL_Texture* load_texture_from_memory(SDL_Renderer* renderer,
 
     return tex;
 }
+
+
+TTF_Font* load_font_from_memory(const unsigned char* data,
+                                unsigned int data_len,
+                                int pt_size)
+{
+    SDL_IOStream* io = SDL_IOFromConstMem((void*)data, data_len);
+    if (!io) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                     "SDL_IOFromConstMem (font) error: %s", SDL_GetError());
+        return nullptr;
+    }
+
+    TTF_Font* font = TTF_OpenFontIO(io, true, pt_size);
+    if (!font) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                     "TTF_OpenFontIO error: %s", SDL_GetError());
+        return nullptr;
+    }
+
+    return font;
+}
+
 
 void null_seed() {
     srand(time(NULL));
@@ -325,10 +350,10 @@ public:
         if (wait == 35) {
             if (i != duration) {
                 if (type == "wave"){
-                    if (orientation == "Down") fall -= 0.75;
-                    else if (orientation == "Up") fall += 0.75;
-                    if (fall >= 10) orientation = "Down";
-                    else if (fall <= -10) orientation = "Up";
+                    if (orientation == "Down") fall -= 1.125f;
+                    else if (orientation == "Up") fall += 1.125f;
+                    if (fall >= 12) orientation = "Down";
+                    else if (fall <= -7) orientation = "Up";
                     pos += static_cast<float>(fall);
                     rect.x -= static_cast<float>(speed);
                     i++;
@@ -372,13 +397,6 @@ public:
 
 int main(int argc, char *argv[]) {
 
-    for (int i = 1; i < argc; ++i) {  // start at 1 to skip the program name
-        std::string arg = argv[i];
-        if (arg == "--arg1") {
-            int temporal_variable;
-        }
-    }
-
     null_seed();
     int screen_width = 1366, screen_height = 768;
     SDL_Window *window;
@@ -387,10 +405,21 @@ int main(int argc, char *argv[]) {
     SDL_Color white = {255, 255, 255, 255};
 
     if (!SDL_Init(SDL_INIT_VIDEO)) return 3;
-    if (!SDL_CreateWindowAndRenderer("PyPack Joyride beta", screen_width, screen_height, SDL_WINDOW_RESIZABLE, &window, &renderer)) return 3;
+    for (int i = 1; i < argc; ++i) {  // start at 1 to skip the program name
+        std::string arg = argv[i];
+        if (arg == "--arg1") {
+            int temporal_variable;
+        }
+    }
+    if (!SDL_CreateWindowAndRenderer("PyPack Joyride beta", screen_width, screen_height, SDL_WINDOW_BORDERLESS, &window, &renderer)) return 3;
     if (!TTF_Init()) return 3;
 
-    TTF_Font* font = TTF_OpenFont("res/fnt/ModernDOS9x16.ttf", 24);
+    TTF_Font* font = load_font_from_memory(res_fnt_ModernDOS9x16_ttf,
+                                       res_fnt_ModernDOS9x16_ttf_len,
+                                       32);  // empieza con 16 pt
+
+    TTF_SetFontHinting(font, TTF_HINTING_MONO);  // opcional pero recomendable
+
 
     SDL_Texture *player_texture = load_texture_from_memory(renderer, res_img_Walk1_png, res_img_Walk1_png_len);
     SDL_Texture *background = load_texture_from_memory(renderer, res_img_bg_jpg, res_img_bg_jpg_len);
