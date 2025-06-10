@@ -11,6 +11,8 @@
 #include <algorithm>
 #include <limits>
 
+#include "res/fnt/MS-DOS.h"
+
 #include "res/img/BarryDead.h"  // generado con xxd -i "input" > "output"
 #include "res/img/bg_rvrs.h"
 #include "res/img/bg.h"
@@ -36,11 +38,7 @@
 #include "res/img/Walk3.h"
 #include "res/img/Walk4.h"
 
-#include "res/fnt/MS-DOS.h"
-
-SDL_Texture* load_texture_from_memory(SDL_Renderer* renderer,
-                                      const unsigned char* data,
-                                      unsigned int data_len)
+SDL_Texture* load_texture_from_memory(SDL_Renderer* renderer, const unsigned char* data, unsigned int data_len)
 {
     SDL_IOStream* io = SDL_IOFromConstMem((void*)data, data_len);
     if (!io) {
@@ -58,10 +56,7 @@ SDL_Texture* load_texture_from_memory(SDL_Renderer* renderer,
     return tex;
 }
 
-
-TTF_Font* load_font_from_memory(const unsigned char* data,
-                                unsigned int data_len,
-                                int pt_size)
+TTF_Font* load_font_from_memory(const unsigned char* data, unsigned int data_len, int pt_size)
 {
     SDL_IOStream* io = SDL_IOFromConstMem((void*)data, data_len);
     if (!io) {
@@ -80,11 +75,9 @@ TTF_Font* load_font_from_memory(const unsigned char* data,
     return font;
 }
 
-
 void null_seed() {
     srand(time(NULL));
 }
-
 
 SDL_Texture* load_texture(SDL_Renderer *renderer, const char *file_path) {
     SDL_Texture *texture = IMG_LoadTexture(renderer, file_path);
@@ -484,8 +477,8 @@ int main(int argc, char *argv[]) {
                         // Resetear la escena
                         for (auto& missile : missiles) {
                             missile.launched = false;
-                            missile.rect.x = 1366;
-                            missile.rect.y = 0;
+                            missile.rect.x = 1324.0f;
+                            missile.rect.y = -2147483648;
                             missile.f = 1;
                             missile.i = 0;
                             missile.wait = 0;
