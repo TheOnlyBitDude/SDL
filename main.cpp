@@ -210,11 +210,6 @@ public:
 
         player_rect->x = *player_x;
         player_rect->y = *player_y;
-
-        if (SDL_HasRectIntersectionFloat(player_rect, obstacle_rect)) {
-            SDL_Log("Collision detected, exiting...");
-            *running = 0;
-        }
     }
 
     void animate(SDL_Renderer *renderer, SDL_Texture **player_texture, int player_frame) {
@@ -485,6 +480,20 @@ int main(int argc, char *argv[]) {
                     // Detección de click
 
                     if (SDL_PointInRectFloat(&mouse_point, &window_rect)) stage = "Game";
+                    if (SDL_PointInRectFloat(&mouse_point, &window_rect)) {
+                        // Resetear la escena
+                        for (auto& missile : missiles) {
+                            missile.launched = false;
+                            missile.rect.x = 1366;
+                            missile.rect.y = 0;
+                            missile.f = 1;
+                            missile.i = 0;
+                            missile.wait = 0;
+                        }
+
+                        fall = 0.0f;
+                        player_y = floor_rect.y - player_rect.h;
+                    }
                     if (SDL_PointInRectFloat(&mouse_point, &player_rect)) {
                         SDL_Log("Haz hecho clic sobre el jugadór.");
                     }
