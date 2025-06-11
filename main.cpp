@@ -11,7 +11,13 @@
 #include <algorithm>
 #include <limits>
 
-
+#include "res/snd/Elektrik.h"
+#include "res/snd/Explode.h"
+#include "res/snd/jetpack_fire.h"
+#include "res/snd/Launch.h"
+#include "res/snd/smash.h"
+#include "res/snd/Theme.h"
+#include "res/snd/Warning.h"
 
 #include "res/fnt/MS-DOS.h"
 
