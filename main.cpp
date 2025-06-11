@@ -11,13 +11,7 @@
 #include <algorithm>
 #include <limits>
 
-#include "res/snd/Elektrik.h"
-#include "res/snd/Explode.h"
-#include "res/snd/jetpack_fire.h"
-#include "res/snd/Launch.h"
-#include "res/snd/smash.h"
-#include "res/snd/Theme.h"
-#include "res/snd/Warning.h"
+
 
 #include "res/fnt/MS-DOS.h"
 
@@ -46,20 +40,16 @@
 #include "res/img/Walk3.h"
 #include "res/img/Walk4.h"
 
-SDL_Texture* load_texture_from_memory(SDL_Renderer* renderer, const unsigned char* data, unsigned int data_len)
+SDL_Texture* load_texture_from_memory(SDL_Renderer* renderer, const unsigned char* data, unsigned int data_len, const char* asset_name)
 {
     SDL_IOStream* io = SDL_IOFromConstMem((void*)data, data_len);
     if (!io) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-                     "SDL_IOFromConstMem error: %s", SDL_GetError());
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "[%s] SDL_IOFromConstMem error: %s", asset_name, SDL_GetError());
         return nullptr;
     }
+
     SDL_Texture* tex = IMG_LoadTexture_IO(renderer, io, true);
-    if (!tex) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-                     "IMG_LoadTexture_IO error: %s", SDL_GetError());
-        return nullptr;
-    }
+    if (!tex) SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "[%s] IMG_LoadTexture_IO error: %s", asset_name, SDL_GetError());
 
     return tex;
 }
@@ -139,9 +129,7 @@ public:
     }
 
     void render() const {
-        if (texture) {
-            SDL_RenderTexture(renderer, texture, nullptr, &rect);
-        }
+        if (texture) SDL_RenderTexture(renderer, texture, nullptr, &rect);
     }
 };
 
@@ -175,6 +163,16 @@ public:
 class Barry {
 public:
     std::string animation = "Run";
+
+    SDL_Texture* Walk1;
+    SDL_Texture* Walk2;
+    SDL_Texture* Walk3;
+    SDL_Texture* Walk4;
+    SDL_Texture* Fly1;
+    SDL_Texture* Fly2;
+    SDL_Texture* Fly3;
+    SDL_Texture* FlyFall;
+    
     void move(float *fall, float *player_x, float *player_y, float player_speed, float deltaTime, SDL_FRect *player_rect, SDL_FRect *obstacle_rect, SDL_FRect *roof_rect, SDL_FRect *floor_rect, SDL_FRect *reverse_floor_rect, int *running) {
         const bool *keyboard = SDL_GetKeyboardState(NULL);
         bool on_floor = SDL_HasRectIntersectionFloat(player_rect, floor_rect) || SDL_HasRectIntersectionFloat(player_rect, reverse_floor_rect);
@@ -198,12 +196,8 @@ public:
                 animation = "Run";
                 *fall = 0.0f;
                 *player_y = floor_rect->y - player_rect->h;
-            } else {
-                animation = "Fall";
-            }
-            if (on_roof) {
-                *player_y = roof_rect->y + roof_rect->h + 1;
-            }
+            } else animation = "Fall";
+            if (on_roof) *player_y = roof_rect->y + roof_rect->h + 1;
         }
 
         if (*fall > 10.0f) *fall = 10.0f;
@@ -213,44 +207,46 @@ public:
         player_rect->y = *player_y;
     }
 
-    void animate(SDL_Renderer *renderer, SDL_Texture **player_texture, int player_frame) {
-        if (*player_texture) {
-            SDL_DestroyTexture(*player_texture);
-            *player_texture = NULL;
-        }
-        
-        if (animation == "Run") {
-            if (player_frame <= 10) {
-                *player_texture = load_texture_from_memory(renderer, res_img_Walk1_png, res_img_Walk1_png_len);
-            } else if (player_frame <= 20) {
-                *player_texture = load_texture_from_memory(renderer, res_img_Walk2_png, res_img_Walk2_png_len);
-            } else if (player_frame <= 30) {
-                *player_texture = load_texture_from_memory(renderer, res_img_Walk3_png, res_img_Walk3_png_len);
-            } else if (player_frame <= 40) {
-                *player_texture = load_texture_from_memory(renderer, res_img_Walk4_png, res_img_Walk4_png_len);
-            }
-        } else if (animation == "Fly") {
-            if (player_frame <= 5) {
-                *player_texture = load_texture_from_memory(renderer, res_img_Fly1_png, res_img_Fly1_png_len);
-            } else if (player_frame <= 10) {
-                *player_texture = load_texture_from_memory(renderer, res_img_Fly2_png, res_img_Fly2_png_len);
-            } else if (player_frame <= 15) {
-                *player_texture = load_texture_from_memory(renderer, res_img_Fly3_png, res_img_Fly3_png_len);
-            } else if (player_frame <= 20) {
-                *player_texture = load_texture_from_memory(renderer, res_img_FlyFall_png, res_img_FlyFall_png_len);
-            } else if (player_frame <= 25) {
-                *player_texture = load_texture_from_memory(renderer, res_img_Fly1_png, res_img_Fly1_png_len);
-            } else if (player_frame <= 30) {
-                *player_texture = load_texture_from_memory(renderer, res_img_Fly2_png, res_img_Fly2_png_len);
-            } else if (player_frame <= 35) {
-                *player_texture = load_texture_from_memory(renderer, res_img_Fly3_png, res_img_Fly3_png_len);
-            } else if (player_frame <= 40) {
-                *player_texture = load_texture_from_memory(renderer, res_img_FlyFall_png, res_img_FlyFall_png_len);
-            }
-        } else {
-            *player_texture = load_texture_from_memory(renderer, res_img_FlyFall_png, res_img_FlyFall_png_len);
-        }
+    void load_textures(SDL_Renderer* renderer) {
+        Walk1 = load_texture_from_memory(renderer, res_img_Walk1_png, res_img_Walk1_png_len, "Walk1");
+        Walk2 = load_texture_from_memory(renderer, res_img_Walk2_png, res_img_Walk2_png_len, "Walk2");
+        Walk3 = load_texture_from_memory(renderer, res_img_Walk3_png, res_img_Walk3_png_len, "Walk3");
+        Walk4 = load_texture_from_memory(renderer, res_img_Walk4_png, res_img_Walk4_png_len, "Walk4");
+        Fly1 = load_texture_from_memory(renderer, res_img_Fly1_png, res_img_Fly1_png_len, "Fly1");
+        Fly2 = load_texture_from_memory(renderer, res_img_Fly2_png, res_img_Fly2_png_len, "Fly2");
+        Fly3 = load_texture_from_memory(renderer, res_img_Fly3_png, res_img_Fly3_png_len, "Fly3");
+        FlyFall = load_texture_from_memory(renderer, res_img_FlyFall_png, res_img_FlyFall_png_len, "FlyFall");
     }
+
+    void free_textures() {
+        SDL_DestroyTexture(Walk1);
+        SDL_DestroyTexture(Walk2);
+        SDL_DestroyTexture(Walk3);
+        SDL_DestroyTexture(Walk4);
+        SDL_DestroyTexture(Fly1);
+        SDL_DestroyTexture(Fly2);
+        SDL_DestroyTexture(Fly3);
+        SDL_DestroyTexture(FlyFall);
+    }
+
+    void animate(SDL_Texture** player_texture, int player_frame) {
+        if (animation == "Run") {
+            if (player_frame <= 10) *player_texture = Walk1;
+            else if (player_frame <= 20) *player_texture = Walk2;
+            else if (player_frame <= 30) *player_texture = Walk3;
+            else if (player_frame <= 40) *player_texture = Walk4;
+        } else if (animation == "Fly") {
+            if (player_frame <= 5) *player_texture = Fly1;
+            else if (player_frame <= 10) *player_texture = Fly2;
+            else if (player_frame <= 15) *player_texture = Fly3;
+            else if (player_frame <= 20) *player_texture = FlyFall;
+            else if (player_frame <= 25) *player_texture = Fly1;
+            else if (player_frame <= 30) *player_texture = Fly2;
+            else if (player_frame <= 35) *player_texture = Fly3;
+            else if (player_frame <= 40) *player_texture = FlyFall;
+        } else *player_texture = FlyFall;
+    }
+
 
     void handle_input(std::vector<Bullet>& bullets, SDL_Texture* bullet_texture, const SDL_FRect& player_rect) {
         const bool *keyboard = SDL_GetKeyboardState(NULL);
@@ -299,33 +295,49 @@ public:
           type(type)
     {
         rect = { x, y, width, height };
-        texture = load_texture_from_memory(renderer, res_img_Rocket1_png, res_img_Rocket1_png_len);
+        texture = load_texture_from_memory(renderer, res_img_Missile_Target_png, res_img_Missile_Target_png_len, "Missile_Target");
     }
 
 
+    SDL_Texture* Target;
+    SDL_Texture* Rocket1;
+    SDL_Texture* Rocket2;
+    SDL_Texture* Rocket3;
+    SDL_Texture* Rocket4;
+
+    void load_textures(SDL_Renderer* renderer) {
+        Target = load_texture_from_memory(renderer, res_img_Missile_Target_png, res_img_Missile_Target_png_len, "Missile_Target");
+        Rocket1 = load_texture_from_memory(renderer, res_img_Rocket1_png, res_img_Rocket1_png_len, "Rocket1");
+        Rocket2 = load_texture_from_memory(renderer, res_img_Rocket2_png, res_img_Rocket2_png_len, "Rocket2");
+        Rocket3 = load_texture_from_memory(renderer, res_img_Rocket3_png, res_img_Rocket3_png_len, "Rocket3");
+        Rocket4 = load_texture_from_memory(renderer, res_img_Rocket4_png, res_img_Rocket4_png_len, "Rocket4");
+    }
+
+    void free_textures() {
+        SDL_DestroyTexture(Target);
+        SDL_DestroyTexture(Rocket1);
+        SDL_DestroyTexture(Rocket2);
+        SDL_DestroyTexture(Rocket3);
+        SDL_DestroyTexture(Rocket4);
+    }
+
+    // Then inside animate() just switch between preloaded textures:
     void animate() {
-        if (counter >= 0 && counter < 2)
-            texture = load_texture_from_memory(renderer, res_img_Rocket1_png, res_img_Rocket1_png_len);
-        else if (counter >= 2 && counter < 4)
-            texture = load_texture_from_memory(renderer, res_img_Rocket2_png, res_img_Rocket2_png_len);
-        else if (counter >= 4 && counter < 6)
-            texture = load_texture_from_memory(renderer, res_img_Rocket3_png, res_img_Rocket3_png_len);
-        else if (counter >= 6 && counter < 8)
-            texture = load_texture_from_memory(renderer, res_img_Rocket4_png, res_img_Rocket4_png_len);
+        if (counter >= 0 && counter < 2) texture = Rocket1;
+        else if (counter >= 2 && counter < 4) texture = Rocket2;
+        else if (counter >= 4 && counter < 6) texture = Rocket3;
+        else if (counter >= 6 && counter < 8) texture = Rocket4;
 
         counter++;
-        if (counter >= 8)
-            counter = 0;
+        if (counter >= 8) counter = 0;
     }
-
 
     void warning() {
         if (!pre_launch) {
+            texture = Target;
             pos = static_cast<float>(20 + rand() % (668 - 20));
             rect.y = pos;
             launched = false;
-
-            // Warning
         }
         launch();
     }
@@ -366,14 +378,11 @@ public:
                 launched = false;
             }
 
-            if (!f)
-                f = true;
+            if (!f) f = true;
 
             rect.y = pos;
             animate();
-        } else {
-            wait++;
-        }
+        } else wait++;
     }
 
     void update() {
@@ -381,8 +390,7 @@ public:
     }
 
     void render() {
-        if (texture)
-            SDL_RenderTexture(renderer, texture, NULL, &rect);
+        if (texture) SDL_RenderTexture(renderer, texture, NULL, &rect);
     }
 
     bool collides_with(const SDL_FRect& player_rect) {
@@ -396,15 +404,32 @@ public:
     SDL_Texture* texture;
     SDL_Renderer* renderer;
 
+    SDL_Texture* Horizontal;
+    SDL_Texture* Vertical;
+
     int speed;
     std::string type;
 
     Electricity(SDL_Renderer* rend, float x, float y, float width, float height, int spd, std::string type)
-        : renderer(rend), speed(spd), type(type)
+        : renderer(rend), speed(spd), type(type),
+          Horizontal(nullptr), Vertical(nullptr)
     {
         rect = { x, y, width, height };
-        if (type == "horizontal") texture = load_texture_from_memory(renderer, res_img_elektrik_png, res_img_elektrik_png_len);
-        else texture = load_texture_from_memory(renderer, res_img_elektrik_vert_png, res_img_elektrik_vert_png_len);
+        texture = nullptr;
+    }
+
+    void load_textures() {
+        Horizontal = load_texture_from_memory(renderer, res_img_elektrik_png, res_img_elektrik_png_len, "elektrik");
+        Vertical = load_texture_from_memory(renderer, res_img_elektrik_vert_png, res_img_elektrik_vert_png_len, "elektrik_vert");
+
+        // After loading, assign the correct texture for this instance
+        if (type == "horizontal") texture = Horizontal;
+        else texture = Vertical;
+    }
+
+    void free_textures() {
+        SDL_DestroyTexture(Horizontal);
+        SDL_DestroyTexture(Vertical);
     }
 
     void launch() {
@@ -412,14 +437,27 @@ public:
     }
 
     void render() {
-        if (texture)
-            SDL_RenderTexture(renderer, texture, NULL, &rect);
+        if (texture) SDL_RenderTexture(renderer, texture, NULL, &rect);
     }
 
     bool collides_with(const SDL_FRect& player_rect) {
         return SDL_HasRectIntersectionFloat(&rect, &player_rect);
     }
 };
+
+void draw_hitbox(SDL_Renderer* renderer, const SDL_FRect& rect, SDL_Color color, int thickness) {
+    SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
+
+    for (int i = 0; i < thickness; i++) {
+        SDL_FRect r = {
+            rect.x + i,
+            rect.y + i,
+            rect.w - 2 * i,
+            rect.h - 2 * i
+        };
+        SDL_RenderRect(renderer, &r);
+    }
+}
 
 
 
@@ -432,12 +470,14 @@ int main(int argc, char *argv[]) {
     SDL_Event event;
     SDL_Color white = {255, 255, 255, 255};
 
+    bool hitboxes = false;
+
     if (!SDL_Init(SDL_INIT_VIDEO)) return 3;
+    SDL_SetLogPriorities(SDL_LOG_PRIORITY_VERBOSE);
+
     for (int i = 1; i < argc; ++i) {  // start at 1 to skip the program name
         std::string arg = argv[i];
-        if (arg == "--arg1") {
-            int temporal_variable;
-        }
+        if (arg == "--hitboxes") hitboxes = true;
     }
     if (!SDL_CreateWindowAndRenderer("PyPack Joyride beta", screen_width, screen_height, SDL_WINDOW_BORDERLESS, &window, &renderer)) return 3;
     if (!TTF_Init()) return 3;
@@ -449,13 +489,13 @@ int main(int argc, char *argv[]) {
     TTF_SetFontHinting(font, TTF_HINTING_MONO);  // opcional pero recomendable
 
 
-    SDL_Texture *player_texture = load_texture_from_memory(renderer, res_img_Walk1_png, res_img_Walk1_png_len);
-    SDL_Texture *background = load_texture_from_memory(renderer, res_img_bg_jpg, res_img_bg_jpg_len);
-    SDL_Texture *reverse_background = load_texture_from_memory(renderer, res_img_bg_rvrs_jpg, res_img_bg_rvrs_jpg_len);
-    SDL_Texture *floor = load_texture_from_memory(renderer, res_img_floor_png, res_img_floor_png_len);
-    SDL_Texture *reverse_floor = load_texture_from_memory(renderer, res_img_floor_rvrs_png, res_img_floor_rvrs_png_len);
-    SDL_Texture *roof = load_texture_from_memory(renderer, res_img_roof_png, res_img_roof_png_len);
-    SDL_Texture *bullet_texture = load_texture_from_memory(renderer, res_img_bullet_png, res_img_bullet_png_len);
+    SDL_Texture *player_texture = load_texture_from_memory(renderer, res_img_Walk1_png, res_img_Walk1_png_len, "Walk1");
+    SDL_Texture *background = load_texture_from_memory(renderer, res_img_bg_jpg, res_img_bg_jpg_len, "bg");
+    SDL_Texture *reverse_background = load_texture_from_memory(renderer, res_img_bg_rvrs_jpg, res_img_bg_rvrs_jpg_len, "bg_rvrs");
+    SDL_Texture *floor = load_texture_from_memory(renderer, res_img_floor_png, res_img_floor_png_len, "floor");
+    SDL_Texture *reverse_floor = load_texture_from_memory(renderer, res_img_floor_rvrs_png, res_img_floor_rvrs_png_len, "floor_rvrs");
+    SDL_Texture *roof = load_texture_from_memory(renderer, res_img_roof_png, res_img_roof_png_len, "roof");
+    SDL_Texture *bullet_texture = load_texture_from_memory(renderer, res_img_bullet_png, res_img_bullet_png_len, "bullet");
 
 
 
@@ -493,6 +533,10 @@ int main(int argc, char *argv[]) {
     SDL_FRect window_rect {0.0f, 0.0f, static_cast<float>(screen_width), static_cast<float>(screen_height)};
 
 
+    barry.load_textures(renderer);
+    for (auto& missile : missiles) missile.load_textures(renderer);
+
+
     while (running) {
 
 
@@ -524,6 +568,7 @@ int main(int argc, char *argv[]) {
                             missile.f = 1;
                             missile.i = 0;
                             missile.wait = 0;
+                            missile.pre_launch = false;
                         }
 
                         electricities.erase(std::remove_if(electricities.begin(), electricities.end(),
@@ -535,9 +580,7 @@ int main(int argc, char *argv[]) {
                         player_y = floor_rect.y - player_rect.h;
                         stage = "Game";
                     }
-                    if (SDL_PointInRectFloat(&mouse_point, &player_rect)) {
-                        SDL_Log("Haz hecho clic sobre el jugadór.");
-                    }
+                    if (SDL_PointInRectFloat(&mouse_point, &player_rect)) SDL_Log("Haz hecho clic sobre el jugadór.");
                 }
             }
         }
@@ -545,12 +588,8 @@ int main(int argc, char *argv[]) {
         SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xFF);
         SDL_RenderClear(renderer);
 
-        if (stage == "Title"){
-            title.render();
-        }
-        if (stage == "Lost"){
-            Lost.render();
-        }
+        if (stage == "Title") title.render();
+        if (stage == "Lost") Lost.render();
         if (stage == "Game") {
 
             // Misiles
@@ -590,49 +629,54 @@ int main(int argc, char *argv[]) {
             }
             else if (lnch == 100 || lnch == 200) {
                 electricities.emplace_back(renderer, static_cast<float>(screen_width), rand() % (screen_height - 100) + 50, 68.0f, 282.0f, 20, "vertical");
+                electricities.back().load_textures();
             }
+
             else if (lnch == 50 || lnch == 80 || lnch == 90) {
                 electricities.emplace_back(renderer, static_cast<float>(screen_width), rand() % (screen_height - 100) + 50, 282.0f, 68.0f, 20, "horizontal");
+                electricities.back().load_textures();
             }
 
-
             for (auto& missile : missiles) {
-                if (missile.launched == true) {
-                    missile.update();
-                }
-                if (missile.collides_with(player_rect)) {
-                    stage = "Lost";
-                }
+                if (missile.launched == true) missile.update();
+                if (missile.collides_with(player_rect)) stage = "Lost";
             }
             for (auto& elec : electricities) {
                 elec.launch();
-                if (elec.collides_with(player_rect)) {
-                    stage = "Lost";
-                }
+                if (elec.collides_with(player_rect)) stage = "Lost";
             }
             std::vector<Electricity> new_electricities;
-                for (auto& e : electricities) {
-                    bool hit_floor = SDL_HasRectIntersectionFloat(&e.rect, &floor_rect) ||
-                                    SDL_HasRectIntersectionFloat(&e.rect, &reverse_floor_rect);
-                    if (e.rect.x < -e.rect.w || hit_floor) {
-                        float new_x = static_cast<float>(screen_width);
-                        float new_y = static_cast<float>(rand() % (screen_height - 100) + 50);
-                        float width = 0.0f, height = 0.0f;
 
-                        if (e.type == "vertical") {
-                            width = 68.0f;
-                            height = 282.0f;
-                        } else if (e.type == "horizontal") {
-                            width = 282.0f;
-                            height = 68.0f;
-                        }
+            for (auto& e : electricities) {
+                bool hit_floor = SDL_HasRectIntersectionFloat(&e.rect, &floor_rect) ||
+                                SDL_HasRectIntersectionFloat(&e.rect, &reverse_floor_rect);
 
-                        new_electricities.emplace_back(renderer, new_x, new_y, width, height, 20, e.type);
-                    } else {
-                        new_electricities.push_back(e);
+                bool out_of_bounds = (e.rect.x < -e.rect.w);
+
+                if (out_of_bounds) continue;
+                else if (hit_floor) {
+                    // Respawn at new random position
+                    float new_x = static_cast<float>(screen_width);
+                    float new_y = static_cast<float>(rand() % (screen_height - 100) + 50);
+                    float width = 0.0f, height = 0.0f;
+
+                    if (e.type == "vertical") {
+                        width = 68.0f;
+                        height = 282.0f;
+                    } else if (e.type == "horizontal") {
+                        width = 282.0f;
+                        height = 68.0f;
                     }
+
+                    // Add new electricity
+                    new_electricities.emplace_back(renderer, new_x, new_y, width, height, 20, e.type);
+                    new_electricities.back().load_textures();
                 }
-                electricities = std::move(new_electricities);
+                else new_electricities.push_back(e);
+            }
+
+            electricities = std::move(new_electricities);
+
 
 
 
@@ -646,9 +690,7 @@ int main(int argc, char *argv[]) {
 
             // Balas
 
-            for (auto& bullet : bullets) {
-                bullet.shoot(player_rect.x);
-            }
+            for (auto& bullet : bullets) bullet.shoot(player_rect.x);
             bullets.erase(std::remove_if(bullets.begin(), bullets.end(),
             [&](const Bullet& b) {
                 bool out_of_bounds = b.rect.x < -b.rect.w || b.rect.y > screen_height + b.rect.h;
@@ -660,7 +702,7 @@ int main(int argc, char *argv[]) {
             // Animaciones y renderizados
 
             if (++player_frame > 40) player_frame = 0;
-            barry.animate(renderer, &player_texture, player_frame);
+            barry.animate(&player_texture, player_frame);
             update_background_scroll(&floor_rect, &reverse_floor_rect, &bg_rect, &reverse_bg_rect);
 
 
@@ -671,16 +713,34 @@ int main(int argc, char *argv[]) {
             SDL_RenderTexture(renderer, floor, NULL, &floor_rect);
             SDL_RenderTexture(renderer, reverse_floor, NULL, &reverse_floor_rect);
 
-            for (auto& bullet : bullets) {
-                bullet.render(renderer);
+            for (auto& bullet : bullets) bullet.render(renderer);
+
+            for (auto& missile : missiles) missile.render();
+
+            for (auto& elec : electricities) elec.render();
+
+            if (hitboxes) {
+                // Player hitbox (e.g., green)
+                draw_hitbox(renderer, player_rect, SDL_Color{0, 255, 0, 255}, 2);
+
+                // Obstacle hitbox (if used)
+                draw_hitbox(renderer, obstacle_rect, SDL_Color{255, 0, 0, 255}, 2);
+
+                // Roof and floor hitboxes
+                draw_hitbox(renderer, roof_rect, SDL_Color{0, 0, 255, 255}, 2);
+                draw_hitbox(renderer, floor_rect, SDL_Color{0, 0, 255, 255}, 2);
+                draw_hitbox(renderer, reverse_floor_rect, SDL_Color{0, 0, 255, 255}, 2);
+
+                // Bullets
+                for (auto& bullet : bullets) draw_hitbox(renderer, bullet.rect, SDL_Color{255, 255, 0, 255}, 2);
+
+                // Missiles
+                for (auto& missile : missiles) draw_hitbox(renderer, missile.rect, SDL_Color{255, 0, 255, 255}, 2);
+
+                // Electricities
+                for (auto& elec : electricities) draw_hitbox(renderer, elec.rect, SDL_Color{0, 255, 255, 255}, 2);
             }
 
-            for (auto& missile : missiles) {
-                missile.render();
-            }
-            for (auto& elec : electricities) {
-                elec.render();
-            }
         }
 
         SDL_RenderPresent(renderer);
@@ -694,6 +754,9 @@ int main(int argc, char *argv[]) {
     SDL_DestroyTexture(player_texture);
     SDL_DestroyTexture(roof);
     SDL_DestroyTexture(bullet_texture);
+    barry.free_textures();
+    for (auto& missile : missiles) missile.free_textures();
+    for (auto& elec : electricities) elec.free_textures();
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();
