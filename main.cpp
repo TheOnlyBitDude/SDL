@@ -390,6 +390,38 @@ public:
     }
 };
 
+class Electricity {
+public:
+    SDL_FRect rect;
+    SDL_Texture* texture;
+    SDL_Renderer* renderer;
+
+    int speed;
+    std::string type;
+
+    Electricity(SDL_Renderer* rend, float x, float y, float width, float height, int spd, std::string type)
+        : renderer(rend), speed(spd), type(type)
+    {
+        rect = { x, y, width, height };
+        if (type == "horizontal") texture = load_texture_from_memory(renderer, res_img_elektrik_png, res_img_elektrik_png_len);
+        else texture = load_texture_from_memory(renderer, res_img_elektrik_vert_png, res_img_elektrik_vert_png_len);
+    }
+
+    void launch() {
+        rect.x -= static_cast<float>(speed);
+    }
+
+    void render() {
+        if (texture)
+            SDL_RenderTexture(renderer, texture, NULL, &rect);
+    }
+
+    bool collides_with(const SDL_FRect& player_rect) {
+        return SDL_HasRectIntersectionFloat(&rect, &player_rect);
+    }
+};
+
+
 
 int main(int argc, char *argv[]) {
 
@@ -449,6 +481,8 @@ int main(int argc, char *argv[]) {
         missiles.emplace_back(renderer, 0, 2147483647, 93.0f, 34.0f, 50, 52, type);
     }
 
+    std::vector<Electricity> electricities;
+
     TextLabel title(renderer);
     TextLabel Lost(renderer);
     title.setText("PyPack_Joyride!", font, white, static_cast<float>((screen_width / 2.5f) - title.rect.w), 50.0f);
@@ -480,20 +514,26 @@ int main(int argc, char *argv[]) {
                     
                     // Detección de click
 
-                    if (SDL_PointInRectFloat(&mouse_point, &window_rect)) stage = "Game";
-                    if (SDL_PointInRectFloat(&mouse_point, &window_rect)) {
+                    if (SDL_PointInRectFloat(&mouse_point, &window_rect) && stage == "Title") stage = "Game";
+                    if (SDL_PointInRectFloat(&mouse_point, &window_rect) && stage == "Lost") {
                         // Resetear la escena
                         for (auto& missile : missiles) {
                             missile.launched = false;
                             missile.rect.x = 1324.0f;
-                            missile.rect.y = -2147483648;
+                            missile.rect.y = -missile.rect.h;
                             missile.f = 1;
                             missile.i = 0;
                             missile.wait = 0;
                         }
 
+                        electricities.erase(std::remove_if(electricities.begin(), electricities.end(),
+                            [](const Electricity& e) {
+                                return true;
+                            }), electricities.end());
+
                         fall = 0.0f;
                         player_y = floor_rect.y - player_rect.h;
+                        stage = "Game";
                     }
                     if (SDL_PointInRectFloat(&mouse_point, &player_rect)) {
                         SDL_Log("Haz hecho clic sobre el jugadór.");
@@ -548,6 +588,14 @@ int main(int argc, char *argv[]) {
                 missiles[7].update();
                 missiles[7].launched = true;
             }
+            else if (lnch == 100 || lnch == 200) {
+                electricities.emplace_back(renderer, static_cast<float>(screen_width), rand() % (screen_height - 100) + 50, 68.0f, 282.0f, 20, "vertical");
+            }
+            else if (lnch == 50 || lnch == 80 || lnch == 90) {
+                electricities.emplace_back(renderer, static_cast<float>(screen_width), rand() % (screen_height - 100) + 50, 282.0f, 68.0f, 20, "horizontal");
+            }
+
+
             for (auto& missile : missiles) {
                 if (missile.launched == true) {
                     missile.update();
@@ -556,11 +604,43 @@ int main(int argc, char *argv[]) {
                     stage = "Lost";
                 }
             }
+            for (auto& elec : electricities) {
+                elec.launch();
+                if (elec.collides_with(player_rect)) {
+                    stage = "Lost";
+                }
+            }
+            std::vector<Electricity> new_electricities;
+                for (auto& e : electricities) {
+                    bool hit_floor = SDL_HasRectIntersectionFloat(&e.rect, &floor_rect) ||
+                                    SDL_HasRectIntersectionFloat(&e.rect, &reverse_floor_rect);
+                    if (e.rect.x < -e.rect.w || hit_floor) {
+                        float new_x = static_cast<float>(screen_width);
+                        float new_y = static_cast<float>(rand() % (screen_height - 100) + 50);
+                        float width = 0.0f, height = 0.0f;
+
+                        if (e.type == "vertical") {
+                            width = 68.0f;
+                            height = 282.0f;
+                        } else if (e.type == "horizontal") {
+                            width = 282.0f;
+                            height = 68.0f;
+                        }
+
+                        new_electricities.emplace_back(renderer, new_x, new_y, width, height, 20, e.type);
+                    } else {
+                        new_electricities.push_back(e);
+                    }
+                }
+                electricities = std::move(new_electricities);
+
+
+
             
 
             // Jugador     
 
-            barry.move(&fall, &player_x, &player_y, player_speed, deltaTime, &player_rect, &obstacle_rect, &roof_rect, &floor_rect, &reverse_floor_rect, &running);
+            barry.move(&fall, &player_x, &player_y, player_speed, deltaTime, &player_rect, &obstacle_rect, &roof_rect, &floor_rect, &reverse_floor_rect, &running); 
             barry.handle_input(bullets, bullet_texture, player_rect);
             
 
@@ -597,6 +677,9 @@ int main(int argc, char *argv[]) {
 
             for (auto& missile : missiles) {
                 missile.render();
+            }
+            for (auto& elec : electricities) {
+                elec.render();
             }
         }
 
