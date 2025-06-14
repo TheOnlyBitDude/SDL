@@ -15,16 +15,12 @@
 
 #include "res/fnt/MS-DOS.h"
 
-/*
-  Elektrik     = 32000
-  Explode      = 48000
-  jetpack_fire = 48000
-  Launch       = 48000
-  smash        = 384000
-  Theme        = 384000
-  Warning      = 48000
-*/
+#include "res/snd/Elektrik.h"
+#include "res/snd/Explode.h"
+#include "res/snd/jetpack_fire.h"
 #include "res/snd/Launch.h" 
+#include "res/snd/smash.h"
+#include "res/snd/Theme.h"
 #include "res/snd/Warning.h"
 
 #include "res/img/roland.h"
@@ -304,6 +300,7 @@ public:
     std::string orientation = "Down";
 
     OpenALSound* launchSound;
+    OpenALSound* warningSound;
 
     Missile(SDL_Renderer* rend, float x, float y, float width, float height, int spd, int dur, std::string type)
         : renderer(rend), w(width), h(height), speed(spd), duration(dur),
@@ -313,7 +310,8 @@ public:
         rect = { x, y, width, height };
         texture = load_texture_from_memory(renderer, res_img_Missile_Target_png, res_img_Missile_Target_png_len, "Missile_Target");
 
-        launchSound = new OpenALSound(res_snd_Launch_wav, res_snd_Launch_wav_len, 48000); // inicializa el sonido
+        launchSound = new OpenALSound(res_snd_Launch_wav, res_snd_Launch_wav_len); // inicializa el sonido
+        warningSound = new OpenALSound(res_snd_Warning_wav, res_snd_Launch_wav_len);
         }
 
     SDL_Texture* Target;
@@ -355,6 +353,7 @@ public:
             pos = static_cast<float>(20 + rand() % (668 - 20));
             rect.y = pos;
             launched = false;
+            if (warningSound) warningSound->play(false);
         }
         launch();
     }
@@ -529,16 +528,6 @@ int main(int argc, char *argv[]) {
     Barry barry;
     std::vector<Bullet> bullets;
 
-    OpenALSound missile_sounds[7] = {
-        OpenALSound(res_snd_Launch_wav, res_snd_Launch_wav_len, 48000),
-        OpenALSound(res_snd_Launch_wav, res_snd_Launch_wav_len, 48000),
-        OpenALSound(res_snd_Launch_wav, res_snd_Launch_wav_len, 48000),
-        OpenALSound(res_snd_Launch_wav, res_snd_Launch_wav_len, 48000),
-        OpenALSound(res_snd_Launch_wav, res_snd_Launch_wav_len, 48000),
-        OpenALSound(res_snd_Launch_wav, res_snd_Launch_wav_len, 48000),
-        OpenALSound(res_snd_Launch_wav, res_snd_Launch_wav_len, 48000),
-    };
-
     // Crear misiles
     std::vector<Missile> missiles;
     for (int i = 0; i < 7; ++i) {
@@ -562,7 +551,7 @@ int main(int argc, char *argv[]) {
     barry.load_textures(renderer);
     for (auto& missile : missiles) missile.load_textures(renderer);
 
-    OpenALSound Warning(res_snd_Warning_wav, res_snd_Warning_wav_len, 52000);
+    OpenALSound Warning(res_snd_Theme_wav, res_snd_Theme_wav_len);
     
     while (running) {
         if (!Warning.isPlaying()) Warning.play(true);

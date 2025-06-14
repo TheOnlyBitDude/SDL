@@ -11,7 +11,17 @@
 #include <algorithm>
 #include <limits>
 
+#include "res/OpenALSound.hpp"
+
 #include "res/fnt/MS-DOS.h"
+
+#include "res/snd/Elektrik.h"
+#include "res/snd/Explode.h"
+#include "res/snd/jetpack_fire.h"
+#include "res/snd/Launch.h" 
+#include "res/snd/smash.h"
+#include "res/snd/Theme.h"
+#include "res/snd/Warning.h"
 
 #include "res/img/roland.h"
 #include "res/img/BarryDead.h"  // generado con xxd -i "input" > "output"
@@ -38,6 +48,7 @@
 #include "res/img/Walk2.h"
 #include "res/img/Walk3.h"
 #include "res/img/Walk4.h"
+
 
 SDL_Texture* load_texture_from_memory(SDL_Renderer* renderer, const unsigned char* data, unsigned int data_len, const char* asset_name)
 {
@@ -288,15 +299,20 @@ public:
     std::string type;
     std::string orientation = "Down";
 
+    OpenALSound* launchSound;
+    OpenALSound* warningSound;
+
     Missile(SDL_Renderer* rend, float x, float y, float width, float height, int spd, int dur, std::string type)
         : renderer(rend), w(width), h(height), speed(spd), duration(dur),
-          counter(0), i(0), wait(0), pre_launch(false), launched(false), f(false),
-          type(type)
-    {
+            counter(0), i(0), wait(0), pre_launch(false), launched(false), f(false),
+            type(type)
+        {
         rect = { x, y, width, height };
         texture = load_texture_from_memory(renderer, res_img_Missile_Target_png, res_img_Missile_Target_png_len, "Missile_Target");
-    }
 
+        launchSound = new OpenALSound(res_snd_Launch_wav, res_snd_Launch_wav_len); // inicializa el sonido
+        warningSound = new OpenALSound(res_snd_Warning_wav, res_snd_Launch_wav_len);
+        }
 
     SDL_Texture* Target;
     SDL_Texture* Rocket1;
@@ -337,6 +353,7 @@ public:
             pos = static_cast<float>(20 + rand() % (668 - 20));
             rect.y = pos;
             launched = false;
+            if (warningSound) warningSound->play(false);
         }
         launch();
     }
@@ -351,7 +368,7 @@ public:
         }
 
         if (wait == 34) {
-            // Launch
+            if (launchSound) launchSound->play(false);
         }
 
         if (wait == 35) {
@@ -459,7 +476,6 @@ void draw_hitbox(SDL_Renderer* renderer, const SDL_FRect& rect, SDL_Color color,
 }
 
 
-
 int main(int argc, char *argv[]) {
 
     null_seed();
@@ -497,7 +513,6 @@ int main(int argc, char *argv[]) {
     SDL_Texture *bullet_texture = load_texture_from_memory(renderer, res_img_bullet_png, res_img_bullet_png_len, "bullet");
 
 
-
     SDL_FRect bg_rect = { 0, 0, 2740, 1000 }, reverse_bg_rect = { 2740, 0, 2740, 1000 };
     SDL_FRect roof_rect = { 0.0f, -40.0f, static_cast<float>(screen_width), 40.0f };
     SDL_FRect floor_rect = { 0.0f, static_cast<float>(screen_height - 50), 2740.0f, 50.0f };
@@ -520,6 +535,7 @@ int main(int argc, char *argv[]) {
         missiles.emplace_back(renderer, 0, 2147483647, 93.0f, 34.0f, 50, 52, type);
     }
 
+
     std::vector<Electricity> electricities;
 
     TextLabel title(renderer);
@@ -535,8 +551,10 @@ int main(int argc, char *argv[]) {
     barry.load_textures(renderer);
     for (auto& missile : missiles) missile.load_textures(renderer);
 
-
+    OpenALSound Warning(res_snd_Theme_wav, res_snd_Theme_wav_len);
+    
     while (running) {
+        if (!Warning.isPlaying()) Warning.play(true);
 
 
         // Ticks y eventos

@@ -1,15 +1,19 @@
+#pragma once
 #include "OpenALManager.hpp"
+#include "WAVLoader.hpp"
 
 class OpenALSound {
 public:
-    OpenALSound(const unsigned char* data, unsigned int len, int freq)
+    OpenALSound(const unsigned char* data, unsigned int len)
         : buffer(0), source(0) {
-        // Usa el contexto ya creado
         OpenALManager::getInstance();
+
+        WAVData wav = load_wav_from_memory(data, len);
 
         alGenBuffers(1, &buffer);
         alGenSources(1, &source);
-        alBufferData(buffer, AL_FORMAT_MONO16, data, len, freq);
+
+        alBufferData(buffer, wav.format, wav.audioData, wav.audioDataSize, wav.frequency);
         alSourcei(source, AL_BUFFER, buffer);
     }
 
