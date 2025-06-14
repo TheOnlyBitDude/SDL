@@ -1,5 +1,6 @@
 # Auto detect text files and perform LF normalization
 * text=auto
 main_exec filter=lfs diff=lfs merge=lfs -text
+test_exec filter=lfs diff=lfs merge=lfs -text
 main_exec.txt filter=lfs diff=lfs merge=lfs -text
 res/snd/Theme.h filter=lfs diff=lfs merge=lfs -text

@@ -11,12 +11,21 @@
 #include <algorithm>
 #include <limits>
 
-#include "OpenALSound.hpp"
+#include "res/OpenALSound.hpp"
 
 #include "res/fnt/MS-DOS.h"
 
-#include "res/snd/Launch.h"
-#include "res/snd/Theme.h"
+/*
+  Elektrik     = 32000
+  Explode      = 48000
+  jetpack_fire = 48000
+  Launch       = 48000
+  smash        = 384000
+  Theme        = 384000
+  Warning      = 48000
+*/
+#include "res/snd/Launch.h" 
+#include "res/snd/Warning.h"
 
 #include "res/img/roland.h"
 #include "res/img/BarryDead.h"  // generado con xxd -i "input" > "output"
@@ -360,7 +369,7 @@ public:
         }
 
         if (wait == 34) {
-            if (launchSound) launchSound->play();
+            if (launchSound) launchSound->play(false);
         }
 
         if (wait == 35) {
@@ -553,10 +562,10 @@ int main(int argc, char *argv[]) {
     barry.load_textures(renderer);
     for (auto& missile : missiles) missile.load_textures(renderer);
 
-    OpenALSound Theme(res_snd_Theme_wav, res_snd_Theme_wav_len, 384000);
+    OpenALSound Warning(res_snd_Warning_wav, res_snd_Warning_wav_len, 52000);
     
     while (running) {
-        if (!Theme.isPlaying()) Theme.play();
+        if (!Warning.isPlaying()) Warning.play(true);
 
 
         // Ticks y eventos
