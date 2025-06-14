@@ -174,6 +174,8 @@ class Barry {
 public:
     std::string animation = "Run";
 
+    bool dead = false;
+
     SDL_Texture* Walk1;
     SDL_Texture* Walk2;
     SDL_Texture* Walk3;
@@ -195,7 +197,7 @@ public:
 
         if (keyboard[SDL_SCANCODE_SPACE]) {
             animation = "Fly";
-            if (!jetpack_fire->isPlaying()) jetpack_fire->play();
+            if (!jetpack_fire->isPlaying() && !dead) jetpack_fire->play();
             *player_y -= *fall;
             *fall += 0.75f;
 
@@ -616,7 +618,9 @@ int main(int argc, char *argv[]) {
         SDL_RenderClear(renderer);
 
         if (stage == "Title") title.render();
-        if (stage == "Lost") Lost.render();
+        if (stage == "Lost") { 
+            Lost.render();
+            barry.dead = true;
         if (stage == "Game") {
 
             // Misiles
