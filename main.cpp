@@ -13,6 +13,7 @@
 
 #include "res/fnt/MS-DOS.h"
 
+#include "res/img/roland.h"
 #include "res/img/BarryDead.h"  // generado con xxd -i "input" > "output"
 #include "res/img/bg_rvrs.h"
 #include "res/img/bg.h"
@@ -625,7 +626,7 @@ int main(int argc, char *argv[]) {
                 missiles[7].update();
                 missiles[7].launched = true;
             }
-            else if (lnch == 100 || lnch == 200) {
+            else if (lnch == 100 || lnch == 200 || lnch == 299) {
                 electricities.emplace_back(renderer, static_cast<float>(screen_width), rand() % (screen_height - 100) + 50, 68.0f, 282.0f, 20, "vertical");
                 electricities.back().load_textures();
             }
