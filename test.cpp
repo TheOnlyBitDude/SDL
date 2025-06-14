@@ -11,8 +11,14 @@
 #include <algorithm>
 #include <limits>
 
+#include "OpenALSound.hpp"
+
 #include "res/fnt/MS-DOS.h"
 
+#include "res/snd/Launch.h"
+#include "res/snd/Theme.h"
+
+#include "res/img/roland.h"
 #include "res/img/BarryDead.h"  // generado con xxd -i "input" > "output"
 #include "res/img/bg_rvrs.h"
 #include "res/img/bg.h"
@@ -37,6 +43,7 @@
 #include "res/img/Walk2.h"
 #include "res/img/Walk3.h"
 #include "res/img/Walk4.h"
+
 
 SDL_Texture* load_texture_from_memory(SDL_Renderer* renderer, const unsigned char* data, unsigned int data_len, const char* asset_name)
 {
@@ -287,15 +294,18 @@ public:
     std::string type;
     std::string orientation = "Down";
 
+    OpenALSound* launchSound;
+
     Missile(SDL_Renderer* rend, float x, float y, float width, float height, int spd, int dur, std::string type)
         : renderer(rend), w(width), h(height), speed(spd), duration(dur),
-          counter(0), i(0), wait(0), pre_launch(false), launched(false), f(false),
-          type(type)
-    {
+            counter(0), i(0), wait(0), pre_launch(false), launched(false), f(false),
+            type(type)
+        {
         rect = { x, y, width, height };
         texture = load_texture_from_memory(renderer, res_img_Missile_Target_png, res_img_Missile_Target_png_len, "Missile_Target");
-    }
 
+        launchSound = new OpenALSound(res_snd_Launch_wav, res_snd_Launch_wav_len, 48000); // inicializa el sonido
+        }
 
     SDL_Texture* Target;
     SDL_Texture* Rocket1;
@@ -350,7 +360,7 @@ public:
         }
 
         if (wait == 34) {
-            // Launch
+            if (launchSound) launchSound->play();
         }
 
         if (wait == 35) {
@@ -458,7 +468,6 @@ void draw_hitbox(SDL_Renderer* renderer, const SDL_FRect& rect, SDL_Color color,
 }
 
 
-
 int main(int argc, char *argv[]) {
 
     null_seed();
@@ -496,7 +505,6 @@ int main(int argc, char *argv[]) {
     SDL_Texture *bullet_texture = load_texture_from_memory(renderer, res_img_bullet_png, res_img_bullet_png_len, "bullet");
 
 
-
     SDL_FRect bg_rect = { 0, 0, 2740, 1000 }, reverse_bg_rect = { 2740, 0, 2740, 1000 };
     SDL_FRect roof_rect = { 0.0f, -40.0f, static_cast<float>(screen_width), 40.0f };
     SDL_FRect floor_rect = { 0.0f, static_cast<float>(screen_height - 50), 2740.0f, 50.0f };
@@ -512,12 +520,23 @@ int main(int argc, char *argv[]) {
     Barry barry;
     std::vector<Bullet> bullets;
 
+    OpenALSound missile_sounds[7] = {
+        OpenALSound(res_snd_Launch_wav, res_snd_Launch_wav_len, 48000),
+        OpenALSound(res_snd_Launch_wav, res_snd_Launch_wav_len, 48000),
+        OpenALSound(res_snd_Launch_wav, res_snd_Launch_wav_len, 48000),
+        OpenALSound(res_snd_Launch_wav, res_snd_Launch_wav_len, 48000),
+        OpenALSound(res_snd_Launch_wav, res_snd_Launch_wav_len, 48000),
+        OpenALSound(res_snd_Launch_wav, res_snd_Launch_wav_len, 48000),
+        OpenALSound(res_snd_Launch_wav, res_snd_Launch_wav_len, 48000),
+    };
+
     // Crear misiles
     std::vector<Missile> missiles;
     for (int i = 0; i < 7; ++i) {
         std::string type = (i >= 4) ? "wave" : "normal";
         missiles.emplace_back(renderer, 0, 2147483647, 93.0f, 34.0f, 50, 52, type);
     }
+
 
     std::vector<Electricity> electricities;
 
@@ -534,8 +553,10 @@ int main(int argc, char *argv[]) {
     barry.load_textures(renderer);
     for (auto& missile : missiles) missile.load_textures(renderer);
 
-
+    OpenALSound Theme(res_snd_Theme_wav, res_snd_Theme_wav_len, 384000);
+    
     while (running) {
+        if (!Theme.isPlaying()) Theme.play();
 
 
         // Ticks y eventos
@@ -625,7 +646,7 @@ int main(int argc, char *argv[]) {
                 missiles[7].update();
                 missiles[7].launched = true;
             }
-            else if (lnch == 100 || lnch == 200) {
+            else if (lnch == 100 || lnch == 200 || lnch == 299) {
                 electricities.emplace_back(renderer, static_cast<float>(screen_width), rand() % (screen_height - 100) + 50, 68.0f, 282.0f, 20, "vertical");
                 electricities.back().load_textures();
             }
