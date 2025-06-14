@@ -174,6 +174,8 @@ class Barry {
 public:
     std::string animation = "Run";
 
+    bool dead = false;
+
     SDL_Texture* Walk1;
     SDL_Texture* Walk2;
     SDL_Texture* Walk3;
@@ -182,7 +184,12 @@ public:
     SDL_Texture* Fly2;
     SDL_Texture* Fly3;
     SDL_Texture* FlyFall;
-    
+
+    void init_audio() {
+        jetpack_fire = new OpenALSound(res_snd_jetpack_fire_wav, res_snd_jetpack_fire_wav_len);
+    }
+
+
     void move(float *fall, float *player_x, float *player_y, float player_speed, float deltaTime, SDL_FRect *player_rect, SDL_FRect *obstacle_rect, SDL_FRect *roof_rect, SDL_FRect *floor_rect, SDL_FRect *reverse_floor_rect, int *running) {
         const bool *keyboard = SDL_GetKeyboardState(NULL);
         bool on_floor = SDL_HasRectIntersectionFloat(player_rect, floor_rect) || SDL_HasRectIntersectionFloat(player_rect, reverse_floor_rect);
@@ -190,6 +197,7 @@ public:
 
         if (keyboard[SDL_SCANCODE_SPACE]) {
             animation = "Fly";
+            if (!jetpack_fire->isPlaying() && !dead) jetpack_fire->play();
             *player_y -= *fall;
             *fall += 0.75f;
 
@@ -199,6 +207,7 @@ public:
                 *player_y = roof_rect->y + roof_rect->h;
             }
         } else {
+            if (jetpack_fire->isPlaying()) jetpack_fire->stop();
             *fall -= 0.75f;
             *player_y -= *fall;
 
@@ -265,6 +274,13 @@ public:
             bullets.emplace_back(bullet_texture, player_rect.x, player_rect.y+player_rect.h);
         }
     }
+
+    void check_dead() {
+        if (dead && jetpack_fire->isPlaying()) jetpack_fire->stop();
+    }
+
+private:
+    OpenALSound* jetpack_fire;
 };
 
 void update_background_scroll(SDL_FRect *floor_rect, SDL_FRect *reverse_floor_rect, SDL_FRect *bg_rect, SDL_FRect *reverse_bg_rect) {
@@ -549,12 +565,14 @@ int main(int argc, char *argv[]) {
 
 
     barry.load_textures(renderer);
+    barry.init_audio();
     for (auto& missile : missiles) missile.load_textures(renderer);
 
     OpenALSound Warning(res_snd_Theme_wav, res_snd_Theme_wav_len);
     
     while (running) {
         if (!Warning.isPlaying()) Warning.play(true);
+        barry.check_dead();
 
 
         // Ticks y eventos
@@ -596,6 +614,7 @@ int main(int argc, char *argv[]) {
                         fall = 0.0f;
                         player_y = floor_rect.y - player_rect.h;
                         stage = "Game";
+                        barry.dead = false;
                     }
                     if (SDL_PointInRectFloat(&mouse_point, &player_rect)) SDL_Log("Haz hecho clic sobre el jugadór.");
                 }
@@ -606,7 +625,10 @@ int main(int argc, char *argv[]) {
         SDL_RenderClear(renderer);
 
         if (stage == "Title") title.render();
-        if (stage == "Lost") Lost.render();
+        if (stage == "Lost") { 
+            Lost.render();
+            barry.dead = true;
+        }
         if (stage == "Game") {
 
             // Misiles

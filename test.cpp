@@ -274,6 +274,11 @@ public:
             bullets.emplace_back(bullet_texture, player_rect.x, player_rect.y+player_rect.h);
         }
     }
+
+    void check_dead() {
+        if (dead && jetpack_fire->isPlaying()) jetpack_fire->stop();
+    }
+
 private:
     OpenALSound* jetpack_fire;
 };
@@ -567,6 +572,7 @@ int main(int argc, char *argv[]) {
     
     while (running) {
         if (!Warning.isPlaying()) Warning.play(true);
+        barry.check_dead();
 
 
         // Ticks y eventos
@@ -608,6 +614,7 @@ int main(int argc, char *argv[]) {
                         fall = 0.0f;
                         player_y = floor_rect.y - player_rect.h;
                         stage = "Game";
+                        barry.dead = false;
                     }
                     if (SDL_PointInRectFloat(&mouse_point, &player_rect)) SDL_Log("Haz hecho clic sobre el jugadór.");
                 }
@@ -621,6 +628,7 @@ int main(int argc, char *argv[]) {
         if (stage == "Lost") { 
             Lost.render();
             barry.dead = true;
+        }
         if (stage == "Game") {
 
             // Misiles
