@@ -24,7 +24,7 @@
 #include "res/snd/Warning.h"
 
 #include "res/img/roland.h"
-#include "res/img/BarryDead.h"  // generado con xxd -i "input" > "output"
+#include "res/img/BarryDead.h"  // generated with xxd -i "input" > "output"
 #include "res/img/bg_rvrs.h"
 #include "res/img/bg.h"
 #include "res/img/booster.h"
@@ -85,15 +85,6 @@ TTF_Font* load_font_from_memory(const unsigned char* data, unsigned int data_len
 
 void null_seed() {
     srand(time(NULL));
-}
-
-SDL_Texture* load_texture(SDL_Renderer *renderer, const char *file_path) {
-    SDL_Texture *texture = IMG_LoadTexture(renderer, file_path);
-    if (!texture) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to load image '%s': %s", file_path, SDL_GetError());
-        return NULL;
-    }
-    return texture;
 }
 
 class TextLabel {
@@ -184,6 +175,7 @@ public:
     SDL_Texture* Fly2;
     SDL_Texture* Fly3;
     SDL_Texture* FlyFall;
+    OpenALSound* jetpack_fire;
 
     void init_audio() {
         jetpack_fire = new OpenALSound(res_snd_jetpack_fire_wav, res_snd_jetpack_fire_wav_len);
@@ -274,13 +266,6 @@ public:
             bullets.emplace_back(bullet_texture, player_rect.x, player_rect.y+player_rect.h);
         }
     }
-
-    void check_dead() {
-        if (dead && jetpack_fire->isPlaying()) jetpack_fire->stop();
-    }
-
-private:
-    OpenALSound* jetpack_fire;
 };
 
 void update_background_scroll(SDL_FRect *floor_rect, SDL_FRect *reverse_floor_rect, SDL_FRect *bg_rect, SDL_FRect *reverse_bg_rect) {
@@ -352,7 +337,6 @@ public:
         SDL_DestroyTexture(Rocket4);
     }
 
-    // Then inside animate() just switch between preloaded textures:
     void animate() {
         if (counter >= 0 && counter < 2) texture = Rocket1;
         else if (counter >= 2 && counter < 4) texture = Rocket2;
@@ -513,9 +497,7 @@ int main(int argc, char *argv[]) {
     if (!SDL_CreateWindowAndRenderer("PyPack Joyride beta", screen_width, screen_height, SDL_WINDOW_BORDERLESS, &window, &renderer)) return 3;
     if (!TTF_Init()) return 3;
 
-    TTF_Font* font = load_font_from_memory(res_fnt_ModernDOS9x16_ttf,
-                                       res_fnt_ModernDOS9x16_ttf_len,
-                                       32);  // empieza con 16 pt
+    TTF_Font* font = load_font_from_memory(res_fnt_ModernDOS9x16_ttf, res_fnt_ModernDOS9x16_ttf_len, 32);
 
     TTF_SetFontHinting(font, TTF_HINTING_MONO);  // opcional pero recomendable
 
@@ -568,11 +550,14 @@ int main(int argc, char *argv[]) {
     barry.init_audio();
     for (auto& missile : missiles) missile.load_textures(renderer);
 
-    OpenALSound Warning(res_snd_Theme_wav, res_snd_Theme_wav_len);
+    OpenALSound Theme(res_snd_Theme_wav, res_snd_Theme_wav_len);
+    OpenALSound Elektrik(res_snd_Elektrik_wav, res_snd_Elektrik_wav_len);
+    OpenALSound Explode(res_snd_Explode_wav, res_snd_Explode_wav_len);
+    Theme.setVolume(0.3f);
     
     while (running) {
-        if (!Warning.isPlaying()) Warning.play(true);
-        barry.check_dead();
+        if (!Theme.isPlaying()) Theme.play(true);
+        if (barry.dead && barry.jetpack_fire->isPlaying()) barry.jetpack_fire->stop();
 
 
         // Ticks y eventos
@@ -595,7 +580,7 @@ int main(int argc, char *argv[]) {
 
                     if (SDL_PointInRectFloat(&mouse_point, &window_rect) && stage == "Title") stage = "Game";
                     if (SDL_PointInRectFloat(&mouse_point, &window_rect) && stage == "Lost") {
-                        // Resetear la escena
+                        // Reset scene
                         for (auto& missile : missiles) {
                             missile.launched = false;
                             missile.rect.x = 1324.0f;
@@ -604,6 +589,8 @@ int main(int argc, char *argv[]) {
                             missile.i = 0;
                             missile.wait = 0;
                             missile.pre_launch = false;
+                            if (missile.launchSound->isPlaying()) missile.launchSound->stop();
+                            if (missile.warningSound->isPlaying()) missile.warningSound->stop();
                         }
 
                         electricities.erase(std::remove_if(electricities.begin(), electricities.end(),
@@ -631,7 +618,7 @@ int main(int argc, char *argv[]) {
         }
         if (stage == "Game") {
 
-            // Misiles
+            // Randomize generations
 
             int lnch = rand() % 300 + 1;
             if ((lnch == 126 || lnch == 173 || lnch == 111)) {
@@ -666,25 +653,32 @@ int main(int argc, char *argv[]) {
                 missiles[7].update();
                 missiles[7].launched = true;
             }
-            else if (lnch == 100 || lnch == 200 || lnch == 299) {
+            else if (lnch == 100 || lnch == 200 || lnch == 299 || lnch == 298) {
                 electricities.emplace_back(renderer, static_cast<float>(screen_width), rand() % (screen_height - 100) + 50, 68.0f, 282.0f, 20, "vertical");
                 electricities.back().load_textures();
             }
-
-            else if (lnch == 50 || lnch == 80 || lnch == 90) {
+            else if (lnch == 50 || lnch == 80 || lnch == 90 || lnch == 91) {
                 electricities.emplace_back(renderer, static_cast<float>(screen_width), rand() % (screen_height - 100) + 50, 282.0f, 68.0f, 20, "horizontal");
                 electricities.back().load_textures();
             }
-
             for (auto& missile : missiles) {
                 if (missile.launched == true) missile.update();
-                if (missile.collides_with(player_rect)) stage = "Lost";
+                if (missile.collides_with(player_rect)) {
+                    stage = "Lost";
+                    Explode.play();
+                }
             }
             for (auto& elec : electricities) {
                 elec.launch();
-                if (elec.collides_with(player_rect)) stage = "Lost";
+                if (elec.collides_with(player_rect)) {
+                    stage = "Lost";
+                    Elektrik.play();
+                }
             }
             std::vector<Electricity> new_electricities;
+
+
+            // Electricity laws
 
             for (auto& e : electricities) {
                 bool hit_floor = SDL_HasRectIntersectionFloat(&e.rect, &floor_rect) ||
@@ -695,6 +689,7 @@ int main(int argc, char *argv[]) {
                 if (out_of_bounds) continue;
                 else if (hit_floor) {
                     // Respawn at new random position
+
                     float new_x = static_cast<float>(screen_width);
                     float new_y = static_cast<float>(rand() % (screen_height - 100) + 50);
                     float width = 0.0f, height = 0.0f;
@@ -708,26 +703,22 @@ int main(int argc, char *argv[]) {
                     }
 
                     // Add new electricity
+
                     new_electricities.emplace_back(renderer, new_x, new_y, width, height, 20, e.type);
                     new_electricities.back().load_textures();
                 }
                 else new_electricities.push_back(e);
             }
-
             electricities = std::move(new_electricities);
 
 
-
-
-            
-
-            // Jugador     
+            // Player     
 
             barry.move(&fall, &player_x, &player_y, player_speed, deltaTime, &player_rect, &obstacle_rect, &roof_rect, &floor_rect, &reverse_floor_rect, &running); 
             barry.handle_input(bullets, bullet_texture, player_rect);
             
 
-            // Balas
+            // Bullets
 
             for (auto& bullet : bullets) bullet.shoot(player_rect.x);
             bullets.erase(std::remove_if(bullets.begin(), bullets.end(),
@@ -738,12 +729,14 @@ int main(int argc, char *argv[]) {
             }), bullets.end());
 
 
-            // Animaciones y renderizados
+            // Animations
 
             if (++player_frame > 40) player_frame = 0;
             barry.animate(&player_texture, player_frame);
             update_background_scroll(&floor_rect, &reverse_floor_rect, &bg_rect, &reverse_bg_rect);
 
+
+            // Render
 
             SDL_RenderTexture(renderer, background, NULL, &bg_rect);
             SDL_RenderTexture(renderer, reverse_background, NULL, &reverse_bg_rect);
@@ -751,32 +744,21 @@ int main(int argc, char *argv[]) {
             SDL_RenderTexture(renderer, roof, NULL, &roof_rect);
             SDL_RenderTexture(renderer, floor, NULL, &floor_rect);
             SDL_RenderTexture(renderer, reverse_floor, NULL, &reverse_floor_rect);
-
             for (auto& bullet : bullets) bullet.render(renderer);
-
             for (auto& missile : missiles) missile.render();
-
             for (auto& elec : electricities) elec.render();
 
+
+            // Render hitboxes
+
             if (hitboxes) {
-                // Player hitbox (e.g., green)
                 draw_hitbox(renderer, player_rect, SDL_Color{0, 255, 0, 255}, 2);
-
-                // Obstacle hitbox (if used)
                 draw_hitbox(renderer, obstacle_rect, SDL_Color{255, 0, 0, 255}, 2);
-
-                // Roof and floor hitboxes
                 draw_hitbox(renderer, roof_rect, SDL_Color{0, 0, 255, 255}, 2);
                 draw_hitbox(renderer, floor_rect, SDL_Color{0, 0, 255, 255}, 2);
                 draw_hitbox(renderer, reverse_floor_rect, SDL_Color{0, 0, 255, 255}, 2);
-
-                // Bullets
                 for (auto& bullet : bullets) draw_hitbox(renderer, bullet.rect, SDL_Color{255, 255, 0, 255}, 2);
-
-                // Missiles
                 for (auto& missile : missiles) draw_hitbox(renderer, missile.rect, SDL_Color{255, 0, 255, 255}, 2);
-
-                // Electricities
                 for (auto& elec : electricities) draw_hitbox(renderer, elec.rect, SDL_Color{0, 255, 255, 255}, 2);
             }
 
