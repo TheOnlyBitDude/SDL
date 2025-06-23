@@ -539,7 +539,7 @@ int main(int argc, char *argv[]) {
     TextLabel title(renderer);
     TextLabel Lost(renderer);
     title.setText("PyPack_Joyride!", font, white, static_cast<float>((screen_width / 2.5f) - title.rect.w), 50.0f);
-    Lost.setText("You lost! Press anywhere to continue...", font, white, static_cast<float>((screen_width - Lost.rect.w) / 2.0f), 50.0f);
+    Lost.setText("You lost! Press anywhere to continue...", font, white, static_cast<float>((screen_width - Lost.rect.w) - Lost.rect.w), 50.0f);
 
 
     std::string stage = "Title";
